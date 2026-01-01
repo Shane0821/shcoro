@@ -1,0 +1,18 @@
+@PACKAGE_INIT@
+
+# For FetchContent: include from build tree
+if(NOT TARGET shcoro::shcoro)
+    include(${CMAKE_CURRENT_LIST_DIR}/@targets_export_name@.cmake)
+endif()
+
+# Verify target exists
+if(NOT TARGET shcoro::shcoro)
+    message(FATAL_ERROR "Failed to locate shcoro::shcoro target")
+endif()
+
+# Provide version info
+set(shcoro_VERSION @PROJECT_VERSION@)
+
+# Provide include directory variable for compatibility
+set(shcoro_INCLUDE_DIRS ${PACKAGE_PREFIX_DIR}/include)
+
