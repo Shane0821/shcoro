@@ -3,7 +3,7 @@
 #include "shcoro/stackless/generator.hpp"
 
 int main() {
-    auto gen = []() -> shcoro::generator<uint64_t> {
+    auto gen = []() -> shcoro::Generator<uint64_t> {
         uint64_t i = 0;
         while (true) {
             co_yield i;

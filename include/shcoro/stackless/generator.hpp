@@ -8,14 +8,14 @@
 namespace shcoro {
 
 template <typename T>
-class generator {
+class Generator {
    public:
     using value_type = std::remove_reference_t<T>;
     using reference_type = std::conditional_t<std::is_reference_v<T>, T, T&>;
     using pointer_type = value_type*;
 
     struct promise_type {
-        auto get_return_object() { return generator<T>{this}; }
+        auto get_return_object() { return Generator<T>{this}; }
         std::suspend_always initial_suspend() noexcept { return {}; }
         std::suspend_always final_suspend() noexcept { return {}; }
         std::suspend_always yield_value(value_type& val) {
@@ -78,19 +78,19 @@ class generator {
     };
 
    public:
-    generator(const generator&) = delete;
-    generator& operator=(const generator&) = delete;
+    Generator(const Generator&) = delete;
+    Generator& operator=(const Generator&) = delete;
 
-    generator(generator&& other) noexcept : handle_(other.handle_) {
+    Generator(Generator&& other) noexcept : handle_(other.handle_) {
         other.handle_ = nullptr;
     }
-    generator& operator=(generator&& other) noexcept {
+    Generator& operator=(Generator&& other) noexcept {
         handle_ = other.handle_;
         other.handle_ = nullptr;
         return *this;
     }
 
-    ~generator() {
+    ~Generator() {
         if (handle_) {
             handle_.destroy();
         }
@@ -109,7 +109,7 @@ class generator {
     auto end() { return sentinel{}; }
 
    private:
-    explicit generator(promise_type* promise) {
+    explicit Generator(promise_type* promise) {
         handle_ = coroutine_handle_t::from_promise(*promise);
     }
 
