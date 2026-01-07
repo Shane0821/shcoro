@@ -12,6 +12,4 @@ set_target_properties(shcoro PROPERTIES
     CXX_STANDARD_REQUIRED YES
 )
 
-target_link_libraries(shcoro pthread)
-
 add_subdirectory(stackless)
