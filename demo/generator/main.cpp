@@ -4,10 +4,8 @@
 
 int main() {
     auto gen = []() -> shcoro::Generator<uint64_t> {
-        uint64_t i = 0;
-        while (true) {
+        for (auto i = 0ul; i < 100; i++) {
             co_yield i;
-            ++i;
         }
     };
 
@@ -16,9 +14,6 @@ int main() {
     for (auto val : gen()) {
         std::cout << val << std::endl;
         cnt++;
-        if (val >= 100) {
-            break;
-        }
     }
     return 0;
 }
