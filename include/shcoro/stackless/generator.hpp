@@ -10,26 +10,18 @@ namespace shcoro {
 template <typename T>
 class Generator {
    public:
-    using value_type = std::remove_reference_t<T>;
-    using reference_type = std::conditional_t<std::is_reference_v<T>, T, T&>;
-    using pointer_type = value_type*;
-
     struct promise_type {
         auto get_return_object() { return Generator<T>{this}; }
         std::suspend_always initial_suspend() noexcept { return {}; }
         std::suspend_always final_suspend() noexcept { return {}; }
-        std::suspend_always yield_value(value_type& val) {
-            value_ = val;
-            return {};
-        }
-        std::suspend_always yield_value(value_type&& val) {
-            value_ = std::move(val);
+        template <typename V>
+        std::suspend_always yield_value(V&& val) {
+            value_ = std::forward<V>(val);
             return {};
         }
         void unhandled_exception() { exception_ = std::current_exception(); }
 
-        value_type value() const { return value_; }
-        reference_type value() { return value_; }
+        const T& value() const { return value_; }
 
         void rethrow_if_exception() {
             if (exception_) {
@@ -38,7 +30,7 @@ class Generator {
         }
 
        private:
-        value_type value_{};
+        T value_{};
         std::exception_ptr exception_{nullptr};
     };
 
@@ -69,9 +61,9 @@ class Generator {
 
         void operator++(int) { (void)operator++(); }
 
-        reference_type operator*() { return handle_.promise().value(); }
+        const T& operator*() const { return handle_.promise().value(); }
 
-        pointer_type operator->() const { return std::addressof(operator*()); }
+        const T* operator->() const { return std::addressof(operator*()); }
 
        private:
         coroutine_handle_t handle_{nullptr};
