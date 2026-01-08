@@ -56,7 +56,7 @@ class Async {
     }
 
     struct promise_type {
-        auto get_return_object() { return Generator<T>{this}; }
+        auto get_return_object() { return Async<T>{this}; }
         std::suspend_always initial_suspend() noexcept { return {}; }
         void return_value(const value_type& val) { value_ = val; }
         void return_value(value_type&& val) noexcept { value_ = std::move(val); }
@@ -95,7 +95,7 @@ class Async {
     template <AsyncPromiseConcept OtherPromiseType>
     auto await_suspend(std::coroutine_handle<OtherPromiseType> caller) {
         self_.promise().set_caller(caller);
-        self_.promise().set_scheduler(caller.promise().get_shceduler());
+        self_.promise().set_scheduler(caller.promise().get_scheduler());
         return self_;
     }
 
