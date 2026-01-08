@@ -58,8 +58,10 @@ class Async {
     struct promise_type {
         auto get_return_object() { return Async<T>{this}; }
         std::suspend_always initial_suspend() noexcept { return {}; }
-        void return_value(const value_type& val) { value_ = val; }
-        void return_value(value_type&& val) noexcept { value_ = std::move(val); }
+        template <typename V>
+        void return_value(V&& val) {
+            value_ = std::forward<V>(val);
+        }
         auto final_suspend() noexcept {
             struct ResumeCaller {
                 constexpr bool await_ready() const noexcept { return false; }
