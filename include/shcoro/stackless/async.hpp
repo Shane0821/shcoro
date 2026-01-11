@@ -143,6 +143,7 @@ struct async_promise : async_promise_base {
         value_ = std::forward<U>(val);
     }
     const T& get_return_value() const { return value_; }
+    T&& get_return_value() { return std::move(value_); }
 
    protected:
     T value_{};
