@@ -3,7 +3,6 @@
 #include <concepts>
 #include <coroutine>
 #include <exception>
-#include <iostream>
 #include <optional>
 #include <type_traits>
 
@@ -56,7 +55,6 @@ class AsyncBase {
         if constexpr (AsyncPromiseConcept<PromiseType>) {
             self_.promise().set_scheduler(caller.promise().get_scheduler());
         }
-        std::cout << "switch to child\n";
         return self_;
     }
 
@@ -71,12 +69,10 @@ template <typename T = void>
 class Async : public AsyncBase<T> {
    public:
     auto await_resume() const& -> const T& {
-        std::cout << "await_resume\n";
         return this->self_.promise().get_return_value();
     }
 
     auto await_resume() && -> T&& {
-        std::cout << "await_resume\n";
         return std::move(this->self_.promise()).get_return_value();
     }
 
@@ -87,7 +83,7 @@ class Async : public AsyncBase<T> {
 template <>
 class Async<void> : public AsyncBase<void> {
    public:
-    void await_resume() const noexcept { std::cout << "await_resume\n"; }
+    void await_resume() const noexcept {}
 
    protected:
     using AsyncBase<void>::AsyncBase;
@@ -101,18 +97,11 @@ struct async_promise_base {
         template <typename Promise>
         std::coroutine_handle<> await_suspend(
             std::coroutine_handle<Promise> h) const noexcept {
-            std::cout << "switch to caller\n";
             return h.promise().get_caller();
         }
     };
 
-    ~async_promise_base() { std::cout << "promise destroyed\n"; }
-    async_promise_base() { std::cout << "promise created\n"; }
-
-    std::suspend_always initial_suspend() noexcept {
-        std::cout << "initial suspend\n";
-        return {};
-    }
+    std::suspend_always initial_suspend() noexcept { return {}; }
     auto final_suspend() noexcept { return ResumeCallerAwaiter{}; }
 
     void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
