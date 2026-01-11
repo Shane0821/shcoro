@@ -10,6 +10,7 @@
 #include "scheduler.h"
 
 namespace shcoro {
+// Async promise should store a scheduler
 template <typename T>
 concept AsyncPromiseConcept = requires(T t, Scheduler* sched) {
     // Must have getter
@@ -95,7 +96,7 @@ class Async<void> : public AsyncBase<void> {
 struct async_promise_base {
     struct ResumeCallerAwaiter {
         constexpr bool await_ready() const noexcept { return false; }
-        constexpr void await_resume() const noexcept { /* 不应该被调用 */ }
+        constexpr void await_resume() const noexcept { /* should never be called */ }
 
         template <typename Promise>
         std::coroutine_handle<> await_suspend(
