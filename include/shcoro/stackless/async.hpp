@@ -146,41 +146,69 @@ struct async_promise<void> : async_promise_base {
 };
 
 template <typename T>
-class RO {
+class AsyncRO {
    public:
-    ~RO() {
+    struct promise_base {
+        std::suspend_never initial_suspend() noexcept { return {}; }
+        std::suspend_always final_suspend() noexcept { return {}; }
+
+        void unhandled_exception() { exception_ = std::current_exception(); }
+        void rethrow_if_exception() {
+            if (exception_) [[unlikely]] {
+                std::rethrow_exception(exception_);
+            }
+        }
+
+       private:
+        std::exception_ptr exception_{nullptr};
+    };
+
+    struct promise_type;
+
+    ~AsyncRO() {
         if (self_) {
             self_.destroy();
         }
     }
 
-    struct promise_type {
-        auto get_return_object() { return RO<T>{this}; }
-        std::suspend_never initial_suspend() noexcept { return {}; }
-        template <typename V>
-        void return_value(V&& val) {
-            v_ = std::forward<V>(val);
+    T get() {
+        self_.promise().rethrow_if_exception();
+        if constexpr (!std::is_same_v<T, void>) {
+            return self_.promise().get_return_value();
         }
-        std::suspend_always final_suspend() noexcept { return {}; }
-        void unhandled_exception() {}
-
-        T get_value() { return *v_; }
-
-       private:
-        std::optional<T> v_;
-    };
-
-    T get() { return self_.promise().get_value(); }
+    }
 
    private:
-    explicit RO(promise_type* promise) {
+    explicit AsyncRO(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
     }
+
     std::coroutine_handle<promise_type> self_{nullptr};
 };
 
 template <typename T>
-RO<T> spawn_task(Async<T> task, Scheduler* scheduler = nullptr) {
+struct AsyncRO<T>::promise_type : promise_base {
+    auto get_return_object() { return AsyncRO{this}; }
+
+    template <typename U>
+    void return_value(U&& val) {
+        value_ = std::forward<U>(val);
+    }
+    const T& get_return_value() const& { return value_; }
+    T get_return_value() && { return std::move(value_); }
+
+   protected:
+    T value_{};
+};
+
+template <>
+struct AsyncRO<void>::promise_type : promise_base {
+    auto get_return_object() { return AsyncRO{this}; }
+    void return_void() {}
+};
+
+template <typename T>
+AsyncRO<T> spawn_task(Async<T> task, Scheduler* scheduler = nullptr) {
     task.set_scheduler(scheduler);
     co_return co_await task;
 }
