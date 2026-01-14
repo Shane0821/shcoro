@@ -6,6 +6,7 @@
 #include <optional>
 #include <type_traits>
 
+#include "noncopyable.h"
 #include "scheduler.h"
 
 namespace shcoro {
@@ -20,7 +21,7 @@ concept AsyncPromiseConcept = requires(T t, Scheduler* sched) {
 };
 
 template <typename T = void>
-class Async {
+class Async : noncopyable {
    public:
     struct promise_type;
 
@@ -134,7 +135,7 @@ struct Async<void>::promise_type : promise_base {
 };
 
 template <typename T>
-class AsyncRO {
+class AsyncRO : noncopyable {
    public:
     struct promise_base {
         std::suspend_never initial_suspend() noexcept { return {}; }
