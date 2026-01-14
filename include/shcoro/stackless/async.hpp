@@ -19,33 +19,43 @@ concept AsyncPromiseConcept = requires(T t, Scheduler* sched) {
     t.set_scheduler(sched);
 };
 
-template <typename T>
-struct async_promise;
-
-template <typename PromiseType>
-class AsyncBase {
+template <typename T = void>
+class Async {
    public:
-    using promise_type = PromiseType;
+    struct promise_type;
 
-    explicit AsyncBase(promise_type* promise) {
-        self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
-    }
+    struct promise_base {
+        struct ResumeCallerAwaiter {
+            constexpr bool await_ready() const noexcept { return false; }
+            constexpr void await_resume() const noexcept { /* should never be called */ }
 
-    AsyncBase(const AsyncBase&) = delete;
-    AsyncBase& operator=(const AsyncBase&) = delete;
+            std::coroutine_handle<> await_suspend(
+                std::coroutine_handle<promise_type> h) const noexcept {
+                return h.promise().get_caller();
+            }
+        };
 
-    AsyncBase(AsyncBase&& other) noexcept : self_(other.self_) { other.self_ = nullptr; }
-    AsyncBase& operator=(AsyncBase&& other) noexcept {
-        self_ = other.self_;
-        other.self_ = nullptr;
-        return *this;
-    }
+        std::suspend_always initial_suspend() noexcept { return {}; }
+        auto final_suspend() noexcept { return ResumeCallerAwaiter{}; }
 
-    ~AsyncBase() {
-        if (self_) {
-            self_.destroy();
+        void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
+        std::coroutine_handle<> get_caller() noexcept { return caller_; }
+
+        void set_scheduler(Scheduler* other) noexcept { scheduler_ = other; }
+        Scheduler* get_scheduler() noexcept { return scheduler_; }
+
+        void unhandled_exception() { exception_ = std::current_exception(); }
+        void rethrow_if_exception() {
+            if (exception_) [[unlikely]] {
+                std::rethrow_exception(exception_);
+            }
         }
-    }
+
+       protected:
+        std::coroutine_handle<> caller_{};
+        std::exception_ptr exception_{nullptr};
+        Scheduler* scheduler_{nullptr};
+    };
 
     constexpr bool await_ready() const noexcept { return false; }
 
@@ -58,79 +68,57 @@ class AsyncBase {
         return self_;
     }
 
-    void set_scheduler(Scheduler* sched) { self_.promise().set_scheduler(sched); }
-
-   protected:
-    std::coroutine_handle<promise_type> self_{nullptr};
-};
-
-// NOTE: Async can only be called inside a coroutine context
-template <typename T = void>
-class Async : public AsyncBase<async_promise<T>> {
-   public:
-    auto await_resume() const& -> const T& {
+    auto await_resume() const&
+        requires(!std::is_same_v<T, void>)
+    {
         return this->self_.promise().get_return_value();
     }
 
-    auto await_resume() && -> T&& {
+    auto await_resume() &&
+        requires(!std::is_same_v<T, void>)
+    {
         return std::move(this->self_.promise()).get_return_value();
     }
 
-   protected:
-    using AsyncBase<async_promise<T>>::AsyncBase;
-};
+    void await_resume()
+        requires(std::is_same_v<T, void>)
+    {}
 
-template <>
-class Async<void> : public AsyncBase<async_promise<void>> {
-   public:
-    void await_resume() const noexcept {}
+    void set_scheduler(Scheduler* sched) { self_.promise().set_scheduler(sched); }
 
-   protected:
-    using AsyncBase<async_promise<void>>::AsyncBase;
-};
+    Async(const Async&) = delete;
+    Async& operator=(const Async&) = delete;
 
-struct async_promise_base {
-    struct ResumeCallerAwaiter {
-        constexpr bool await_ready() const noexcept { return false; }
-        constexpr void await_resume() const noexcept { /* should never be called */ }
+    Async(Async&& other) noexcept : self_(other.self_) { other.self_ = nullptr; }
+    Async& operator=(Async&& other) noexcept {
+        self_ = other.self_;
+        other.self_ = nullptr;
+        return *this;
+    }
 
-        template <typename Promise>
-        std::coroutine_handle<> await_suspend(
-            std::coroutine_handle<Promise> h) const noexcept {
-            return h.promise().get_caller();
-        }
-    };
-
-    std::suspend_always initial_suspend() noexcept { return {}; }
-    auto final_suspend() noexcept { return ResumeCallerAwaiter{}; }
-
-    void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
-    std::coroutine_handle<> get_caller() noexcept { return caller_; }
-
-    void set_scheduler(Scheduler* other) noexcept { scheduler_ = other; }
-    Scheduler* get_scheduler() noexcept { return scheduler_; }
-
-    void unhandled_exception() { exception_ = std::current_exception(); }
-    void rethrow_if_exception() {
-        if (exception_) [[unlikely]] {
-            std::rethrow_exception(exception_);
+    ~Async() {
+        if (self_) {
+            self_.destroy();
         }
     }
 
-   protected:
-    std::coroutine_handle<> caller_{};
-    std::exception_ptr exception_{nullptr};
-    Scheduler* scheduler_{nullptr};
+   private:
+    explicit Async(promise_type* promise) {
+        self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
+    }
+
+    std::coroutine_handle<promise_type> self_{nullptr};
 };
 
 template <typename T>
-struct async_promise : async_promise_base {
-    auto get_return_object() { return Async<T>{this}; }
+struct Async<T>::promise_type : promise_base {
+    auto get_return_object() { return Async{this}; }
 
     template <typename U>
     void return_value(U&& val) {
         value_ = std::forward<U>(val);
     }
+
     const T& get_return_value() const& { return value_; }
     T get_return_value() && { return std::move(value_); }
 
@@ -139,8 +127,8 @@ struct async_promise : async_promise_base {
 };
 
 template <>
-struct async_promise<void> : async_promise_base {
-    auto get_return_object() { return Async<void>{this}; }
+struct Async<void>::promise_type : promise_base {
+    auto get_return_object() { return Async{this}; }
 
     void return_void() {}
 };
