@@ -22,10 +22,10 @@ concept AsyncPromiseConcept = requires(T t, Scheduler* sched) {
 template <typename T>
 struct async_promise;
 
-template <typename T>
+template <typename PromiseType>
 class AsyncBase {
    public:
-    using promise_type = async_promise<T>;
+    using promise_type = PromiseType;
 
     explicit AsyncBase(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
@@ -49,10 +49,10 @@ class AsyncBase {
 
     constexpr bool await_ready() const noexcept { return false; }
 
-    template <typename PromiseType>
-    auto await_suspend(std::coroutine_handle<PromiseType> caller) noexcept {
+    template <typename CallerPromiseType>
+    auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
         self_.promise().set_caller(caller);
-        if constexpr (AsyncPromiseConcept<PromiseType>) {
+        if constexpr (AsyncPromiseConcept<CallerPromiseType>) {
             self_.promise().set_scheduler(caller.promise().get_scheduler());
         }
         return self_;
@@ -66,7 +66,7 @@ class AsyncBase {
 
 // NOTE: Async can only be called inside a coroutine context
 template <typename T = void>
-class Async : public AsyncBase<T> {
+class Async : public AsyncBase<async_promise<T>> {
    public:
     auto await_resume() const& -> const T& {
         return this->self_.promise().get_return_value();
@@ -77,16 +77,16 @@ class Async : public AsyncBase<T> {
     }
 
    protected:
-    using AsyncBase<T>::AsyncBase;
+    using AsyncBase<async_promise<T>>::AsyncBase;
 };
 
 template <>
-class Async<void> : public AsyncBase<void> {
+class Async<void> : public AsyncBase<async_promise<void>> {
    public:
     void await_resume() const noexcept {}
 
    protected:
-    using AsyncBase<void>::AsyncBase;
+    using AsyncBase<async_promise<void>>::AsyncBase;
 };
 
 struct async_promise_base {
