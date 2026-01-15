@@ -11,13 +11,34 @@
 
 namespace shcoro {
 // Async promise should store a scheduler
-template <typename T>
-concept AsyncPromiseConcept = requires(T t, Scheduler* sched) {
+template <typename Promise>
+concept AsyncPromiseConcept = requires(Promise p, Scheduler* sched) {
     // Must have getter
-    { t.get_scheduler() } -> std::same_as<Scheduler*>;
+    { p.get_scheduler() } -> std::same_as<Scheduler*>;
 
     // Must have setter
-    t.set_scheduler(sched);
+    p.set_scheduler(sched);
+};
+
+template <typename HandleType>
+struct AsyncAwaiter {
+    AsyncAwaiter(HandleType handle) : handle_(handle) {}
+    AsyncAwaiter(HandleType&& handle) : handle_(std::move(handle)) {}
+
+    constexpr bool await_ready() const noexcept { return false; }
+
+    template <AsyncPromiseConcept CallerPromiseType>
+    void await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
+        if (auto sched = caller.promise().get_shceduler(); sched != nullptr) {
+            sched.register(handle_, caller);
+        } else {
+            // error
+        }
+    }
+
+    void await_resume() noexcept {}
+
+    HandleType handle_;
 };
 
 template <typename T = void>
@@ -197,8 +218,13 @@ struct AsyncRO<void>::promise_type : promise_base {
 };
 
 template <typename T>
-AsyncRO<T> spawn_task(Async<T> task, Scheduler* scheduler = nullptr) {
-    task.set_scheduler(scheduler);
+AsyncRO<T> spawn_task(Async<T> task) {
+    co_return co_await task;
+}
+
+template <typename T>
+AsyncRO<T> spawn_task(Async<T> task, Scheduler& scheduler) {
+    task.set_scheduler(&scheduler);
     co_return co_await task;
 }
 
