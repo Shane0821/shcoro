@@ -7,40 +7,43 @@
 #include <type_traits>
 
 #include "noncopyable.h"
-#include "scheduler.h"
 
 namespace shcoro {
-// Async promise should store a scheduler
+
+// wraps any scheduler to perform async operations
+class AsyncScheduler {
+   public:
+    explicit operator bool() const noexcept { return self_ != nullptr; }
+
+    template <class S>
+    static AsyncScheduler from(S& s) noexcept {
+        return AsyncScheduler{(void*)std::addressof(s), &typeid(S)};
+    }
+
+    template <class S>
+    S* get() const noexcept {
+        if (type_ == &typeid(S)) [[likely]] {
+            return static_cast<S*>(self_);
+        }
+        return nullptr;
+    }
+
+   protected:
+    void* self_{nullptr};
+    const std::type_info* type_{nullptr};
+};
+
+// Async promise should store AsyncScheduler
 template <typename Promise>
-concept AsyncPromiseConcept = requires(Promise p, Scheduler* sched) {
+concept AsyncPromiseConcept = requires(Promise p, AsyncScheduler sched) {
     // Must have getter
-    { p.get_scheduler() } -> std::same_as<Scheduler*>;
+    { p.get_scheduler() } -> std::same_as<AsyncScheduler>;
 
     // Must have setter
     p.set_scheduler(sched);
 };
 
-template <typename HandleType>
-struct AsyncAwaiter {
-    AsyncAwaiter(HandleType handle) : handle_(handle) {}
-    AsyncAwaiter(HandleType&& handle) : handle_(std::move(handle)) {}
-
-    constexpr bool await_ready() const noexcept { return false; }
-
-    template <AsyncPromiseConcept CallerPromiseType>
-    void await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
-        if (auto sched = caller.promise().get_shceduler(); sched != nullptr) {
-            sched.register(handle_, caller);
-        } else {
-            // error
-        }
-    }
-
-    void await_resume() noexcept {}
-
-    HandleType handle_;
-};
-
+// Async operation that can be suspended within a nested coroutine
 template <typename T = void>
 class Async : noncopyable {
    public:
@@ -63,8 +66,8 @@ class Async : noncopyable {
         void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
         std::coroutine_handle<> get_caller() noexcept { return caller_; }
 
-        void set_scheduler(Scheduler* other) noexcept { scheduler_ = other; }
-        Scheduler* get_scheduler() noexcept { return scheduler_; }
+        void set_scheduler(AsyncScheduler other) noexcept { scheduler_ = other; }
+        AsyncScheduler get_scheduler() const noexcept { return scheduler_; }
 
         void unhandled_exception() { exception_ = std::current_exception(); }
         void rethrow_if_exception() {
@@ -76,7 +79,7 @@ class Async : noncopyable {
        protected:
         std::coroutine_handle<> caller_{};
         std::exception_ptr exception_{nullptr};
-        Scheduler* scheduler_{nullptr};
+        AsyncScheduler scheduler_;
     };
 
     constexpr bool await_ready() const noexcept { return false; }
@@ -106,7 +109,9 @@ class Async : noncopyable {
         requires(std::is_same_v<T, void>)
     {}
 
-    void set_scheduler(Scheduler* sched) { self_.promise().set_scheduler(sched); }
+    void set_scheduler(AsyncScheduler sched) noexcept {
+        self_.promise().set_scheduler(sched);
+    }
 
     Async(const Async&) = delete;
     Async& operator=(const Async&) = delete;
@@ -155,7 +160,8 @@ struct Async<void>::promise_type : promise_base {
     void return_void() {}
 };
 
-template <typename T>
+// A wrapper to spawn a Async task
+template <typename T = void>
 class AsyncRO : noncopyable {
    public:
     struct promise_base {
@@ -222,9 +228,9 @@ AsyncRO<T> spawn_task(Async<T> task) {
     co_return co_await task;
 }
 
-template <typename T>
+template <typename T, typename Scheduler>
 AsyncRO<T> spawn_task(Async<T> task, Scheduler& scheduler) {
-    task.set_scheduler(&scheduler);
+    task.set_scheduler(AsyncScheduler::from(scheduler));
     co_return co_await task;
 }
 
