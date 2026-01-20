@@ -13,6 +13,13 @@ namespace shcoro {
 // wraps any scheduler to perform async operations
 class AsyncScheduler {
    public:
+    AsyncScheduler() = default;
+
+    AsyncScheduler(void* self, const std::type_info* type) {
+        self_ = self;
+        type_ = type;
+    }
+
     explicit operator bool() const noexcept { return self_ != nullptr; }
 
     template <class S>
@@ -21,7 +28,7 @@ class AsyncScheduler {
     }
 
     template <class S>
-    S* get() const noexcept {
+    S* as() const noexcept {
         if (type_ == &typeid(S)) [[likely]] {
             return static_cast<S*>(self_);
         }
