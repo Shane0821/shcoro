@@ -8,9 +8,8 @@ using shcoro::spawn_task;
 Async<int> inner_func(int x) {
     std::cout << "inner_func called\n";
     int ret = x * x;
-
     if (ret == 9) {
-        throw std::runtime_error("invalid ret 9");
+        throw std::runtime_error("inner invalid ret 9");
     }
     std::cout << "inner_func return: " << ret << '\n';
     co_return ret;
@@ -18,10 +17,15 @@ Async<int> inner_func(int x) {
 
 Async<double> middle_func(int x) {
     std::cout << "middle_func called\n";
-    int y = co_await inner_func(x);
-    double ret = 3.0 * y;
-    std::cout << "middle_func return: " << ret << '\n';
-    co_return ret;
+    try {
+        int y = co_await inner_func(x);
+        double ret = 3.0 * y;
+        std::cout << "middle_func return: " << ret << '\n';
+        co_return ret;
+    } catch (...) {
+        std::cout << "inner function throw\n";
+        throw;
+    }
 }
 
 Async<long long> outter_func(int x) {
