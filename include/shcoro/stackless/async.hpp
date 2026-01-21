@@ -52,7 +52,7 @@ concept AsyncPromiseConcept = requires(Promise p, AsyncScheduler sched) {
 
 // Async operation that can be suspended within a nested coroutine
 template <typename T = void>
-class Async : noncopyable {
+class [[nodiscard]] Async : noncopyable {
    public:
     struct promise_type;
 
@@ -100,21 +100,18 @@ class Async : noncopyable {
         return self_;
     }
 
-    auto await_resume() const&
+    auto await_resume()
         requires(!std::is_same_v<T, void>)
     {
-        return this->self_.promise().get_return_value();
-    }
-
-    auto await_resume() &&
-        requires(!std::is_same_v<T, void>)
-    {
-        return std::move(this->self_.promise()).get_return_value();
+        this->self_.promise().rethrow_if_exception();
+        return std::move(this->self_.promise().get_return_value());
     }
 
     void await_resume()
         requires(std::is_same_v<T, void>)
-    {}
+    {
+        this->self_.promise().rethrow_if_exception();
+    }
 
     void set_scheduler(AsyncScheduler sched) noexcept {
         self_.promise().set_scheduler(sched);
@@ -153,8 +150,7 @@ struct Async<T>::promise_type : promise_base {
         value_ = std::forward<U>(val);
     }
 
-    const T& get_return_value() const& { return value_; }
-    T get_return_value() && { return std::move(value_); }
+    T get_return_value() { return std::move(value_); }
 
    protected:
     T value_{};
