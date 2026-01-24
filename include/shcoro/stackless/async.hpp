@@ -87,13 +87,9 @@ class [[nodiscard]] Async : noncopyable {
         self_.promise().set_scheduler(sched);
     }
 
-    Async(const Async&) = delete;
-    Async& operator=(const Async&) = delete;
-
-    Async(Async&& other) noexcept : self_(other.self_) { other.self_ = nullptr; }
+    Async(Async&& other) noexcept : self_(std::exchange(other.self_, nullptr)) {}
     Async& operator=(Async&& other) noexcept {
-        self_ = other.self_;
-        other.self_ = nullptr;
+        self_ = std::exchange(other.self_, nullptr);
         return *this;
     }
 
