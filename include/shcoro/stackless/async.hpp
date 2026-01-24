@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "noncopyable.h"
+#include "promise_base.hpp"
 #include "scheduler.hpp"
 
 namespace shcoro {
@@ -24,39 +25,28 @@ concept AsyncPromiseConcept = requires(Promise p, AsyncScheduler sched) {
 template <typename T = void>
 class [[nodiscard]] Async : noncopyable {
    public:
-    struct promise_type;
+    struct promise_type : async_promise_base<T> {
+        auto get_return_object() { return Async{this}; }
 
-    struct promise_base {
-        struct ResumeCallerAwaiter {
-            constexpr bool await_ready() const noexcept { return false; }
-            constexpr void await_resume() const noexcept { /* should never be called */ }
+        auto final_suspend() noexcept {
+            struct ResumeCallerAwaiter {
+                constexpr bool await_ready() const noexcept { return false; }
+                constexpr void await_resume()
+                    const noexcept { /* should never be called */ }
 
-            std::coroutine_handle<> await_suspend(
-                std::coroutine_handle<promise_type> h) const noexcept {
-                return h.promise().get_caller();
-            }
-        };
-
-        std::suspend_always initial_suspend() noexcept { return {}; }
-        auto final_suspend() noexcept { return ResumeCallerAwaiter{}; }
+                std::coroutine_handle<> await_suspend(
+                    std::coroutine_handle<promise_type> h) const noexcept {
+                    return h.promise().get_caller();
+                }
+            };
+            return ResumeCallerAwaiter{};
+        }
 
         void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
         std::coroutine_handle<> get_caller() noexcept { return caller_; }
 
-        void set_scheduler(AsyncScheduler other) noexcept { scheduler_ = other; }
-        AsyncScheduler get_scheduler() const noexcept { return scheduler_; }
-
-        void unhandled_exception() { exception_ = std::current_exception(); }
-        void rethrow_if_exception() {
-            if (exception_) [[unlikely]] {
-                std::rethrow_exception(exception_);
-            }
-        }
-
        protected:
         std::coroutine_handle<> caller_{};
-        std::exception_ptr exception_{nullptr};
-        AsyncScheduler scheduler_;
     };
 
     constexpr bool await_ready() const noexcept { return false; }
@@ -105,28 +95,6 @@ class [[nodiscard]] Async : noncopyable {
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
-};
-
-template <typename T>
-struct Async<T>::promise_type : promise_base {
-    auto get_return_object() { return Async{this}; }
-
-    template <typename U>
-    void return_value(U&& val) {
-        value_ = std::forward<U>(val);
-    }
-
-    T get_return_value() { return std::move(value_); }
-
-   protected:
-    T value_{};
-};
-
-template <>
-struct Async<void>::promise_type : promise_base {
-    auto get_return_object() { return Async{this}; }
-
-    void return_void() {}
 };
 
 // A wrapper to spawn a Async task
