@@ -5,6 +5,7 @@
 #include <exception>
 #include <optional>
 
+#include "awaiter_base.hpp"
 #include "noncopyable.h"
 #include "promise_base.hpp"
 #include "scheduler.hpp"
@@ -28,19 +29,7 @@ class [[nodiscard]] Async : noncopyable {
     struct promise_type : async_promise_base<T> {
         auto get_return_object() { return Async{this}; }
 
-        auto final_suspend() noexcept {
-            struct ResumeCallerAwaiter {
-                constexpr bool await_ready() const noexcept { return false; }
-                constexpr void await_resume()
-                    const noexcept { /* should never be called */ }
-
-                std::coroutine_handle<> await_suspend(
-                    std::coroutine_handle<promise_type> h) const noexcept {
-                    return h.promise().get_caller();
-                }
-            };
-            return ResumeCallerAwaiter{};
-        }
+        auto final_suspend() noexcept { return ResumeCallerAwaiter<promise_type>{}; }
 
         void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
         std::coroutine_handle<> get_caller() noexcept { return caller_; }
