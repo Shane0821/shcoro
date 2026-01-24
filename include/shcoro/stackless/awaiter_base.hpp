@@ -2,6 +2,8 @@
 
 #include <coroutine>
 
+namespace shcoro {
+    
 template <typename PromiseType>
 struct ResumeCallerAwaiter {
     constexpr bool await_ready() const noexcept { return false; }
@@ -11,3 +13,5 @@ struct ResumeCallerAwaiter {
         return h.promise().get_caller();
     }
 };
+
+}
