@@ -1,6 +1,5 @@
 #pragma once
 
-#include <concepts>
 #include <coroutine>
 #include <exception>
 #include <optional>
@@ -9,19 +8,9 @@
 #include "noncopyable.h"
 #include "promise_base.hpp"
 #include "scheduler.hpp"
+#include "async_concepts.hpp"
 
 namespace shcoro {
-
-// Async promise should store AsyncScheduler
-template <typename Promise>
-concept AsyncPromiseConcept = requires(Promise p, AsyncScheduler sched) {
-    // Must have getter
-    { p.get_scheduler() } -> std::same_as<AsyncScheduler>;
-
-    // Must have setter
-    p.set_scheduler(sched);
-};
-
 // Async operation that can be suspended within a nested coroutine
 template <typename T = void>
 class [[nodiscard]] Async : noncopyable {
