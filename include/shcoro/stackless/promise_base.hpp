@@ -2,6 +2,7 @@
 
 #include <coroutine>
 #include <stdexcept>
+#include <tuple>
 
 #include "scheduler.hpp"
 
@@ -26,14 +27,27 @@ struct promise_common_base {
     AsyncScheduler scheduler_;
 };
 
-template <typename T>
+template <typename... Args>
 struct async_promise_base : promise_common_base {
     template <typename U>
     void return_value(U&& val) {
         value_ = std::forward<U>(val);
     }
 
-    T get_return_value() { return std::move(value_); }
+    auto get_return_value() { return std::move(value_); }
+
+   protected:
+    std::tuple<Args...> value_{};
+};
+
+template <typename T>
+struct async_promise_base<T> : promise_common_base {
+    template <typename U>
+    void return_value(U&& val) {
+        value_ = std::forward<U>(val);
+    }
+
+    auto get_return_value() { return std::move(value_); }
 
    protected:
     T value_{};
