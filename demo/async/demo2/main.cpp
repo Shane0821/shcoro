@@ -6,7 +6,7 @@
 #include <thread>
 #include <unordered_map>
 
-#include "shcoro/stackless/async.hpp"
+#include "shcoro/stackless/utility.hpp"
 
 using shcoro::Async;
 using shcoro::spawn_task;

@@ -4,41 +4,11 @@
 #include <coroutine>
 #include <exception>
 #include <optional>
-#include <type_traits>
 
 #include "noncopyable.h"
+#include "scheduler.hpp"
 
 namespace shcoro {
-
-// wraps any scheduler to perform async operations
-class AsyncScheduler {
-   public:
-    AsyncScheduler() = default;
-
-    AsyncScheduler(void* self, const std::type_info* type) {
-        self_ = self;
-        type_ = type;
-    }
-
-    explicit operator bool() const noexcept { return self_ != nullptr; }
-
-    template <class S>
-    static AsyncScheduler from(S& s) noexcept {
-        return AsyncScheduler{(void*)std::addressof(s), &typeid(S)};
-    }
-
-    template <class S>
-    S* as() const noexcept {
-        if (type_ == &typeid(S)) [[likely]] {
-            return static_cast<S*>(self_);
-        }
-        return nullptr;
-    }
-
-   protected:
-    void* self_{nullptr};
-    const std::type_info* type_{nullptr};
-};
 
 // Async promise should store AsyncScheduler
 template <typename Promise>
@@ -225,16 +195,5 @@ struct AsyncRO<void>::promise_type : promise_base {
     auto get_return_object() { return AsyncRO{this}; }
     void return_void() {}
 };
-
-template <typename T>
-AsyncRO<T> spawn_task(Async<T> task) {
-    co_return co_await task;
-}
-
-template <typename T, typename Scheduler>
-AsyncRO<T> spawn_task(Async<T> task, Scheduler& scheduler) {
-    task.set_scheduler(AsyncScheduler::from(scheduler));
-    co_return co_await task;
-}
 
 }  // namespace shcoro
