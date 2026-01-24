@@ -3,7 +3,7 @@
 #include "shcoro/stackless/utility.hpp"
 
 using shcoro::Async;
-using shcoro::spawn_task;
+using shcoro::spawn_async;
 
 Async<int> inner_func(int x) {
     std::cout << "inner_func called\n";
@@ -28,7 +28,7 @@ Async<long long> outter_func(int x) {
 }
 
 int main() {
-    auto ret = spawn_task(outter_func(3));
+    auto ret = spawn_async(outter_func(3));
     std::cout << "ret: " << ret.get() << '\n';
     return 0;
 }

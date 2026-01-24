@@ -9,7 +9,7 @@
 #include "shcoro/stackless/utility.hpp"
 
 using shcoro::Async;
-using shcoro::spawn_task;
+using shcoro::spawn_async;
 
 class TimedScheduler {
    public:
@@ -80,8 +80,8 @@ Async<long long> outter_func(int x) {
 
 int main() {
     TimedScheduler sched;
-    auto ret1 = spawn_task(outter_func(3), sched);
-    auto ret2 = spawn_task(outter_func(5), sched);
+    auto ret1 = spawn_async(outter_func(3), sched);
+    auto ret2 = spawn_async(outter_func(5), sched);
     sched.run();
     std::cout << "ret1: " << ret1.get() << '\n';
     std::cout << "ret2: " << ret2.get() << '\n';
