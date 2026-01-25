@@ -8,10 +8,8 @@
 
 namespace shcoro {
 
-struct promise_common_base {
-    auto initial_suspend() noexcept { return std::suspend_always{}; }
-    auto final_suspend() noexcept { return std::suspend_always{}; }
-
+// exception handling
+struct promise_exception_base {
     void unhandled_exception() { exception_ = std::current_exception(); }
     void rethrow_if_exception() {
         if (exception_) [[unlikely]] {
@@ -19,16 +17,37 @@ struct promise_common_base {
         }
     }
 
+   protected:
+    std::exception_ptr exception_{nullptr};
+};
+
+// scheduler support
+struct promise_scheduler_base {
     void set_scheduler(AsyncScheduler other) noexcept { scheduler_ = other; }
     AsyncScheduler get_scheduler() const noexcept { return scheduler_; }
 
    protected:
-    std::exception_ptr exception_{nullptr};
     AsyncScheduler scheduler_;
 };
 
+struct promise_caller_base {
+    void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
+    std::coroutine_handle<> get_caller() noexcept { return caller_; }
+
+   protected:
+    std::coroutine_handle<> caller_;
+};
+
+// suspension behaviour control
+template <typename InitialSuspend, typename FinalSuspend>
+struct promise_suspend_base {
+    InitialSuspend initial_suspend() noexcept { return {}; }
+    FinalSuspend final_suspend() noexcept { return {}; }
+};
+
+// return value handling
 template <typename... Args>
-struct async_promise_base : promise_common_base {
+struct promise_return_base {
     template <typename U>
     void return_value(U&& val) {
         value_ = std::forward<U>(val);
@@ -41,7 +60,7 @@ struct async_promise_base : promise_common_base {
 };
 
 template <typename T>
-struct async_promise_base<T> : promise_common_base {
+struct promise_return_base<T> {
     template <typename U>
     void return_value(U&& val) {
         value_ = std::forward<U>(val);
@@ -54,7 +73,7 @@ struct async_promise_base<T> : promise_common_base {
 };
 
 template <>
-struct async_promise_base<void> : promise_common_base {
+struct promise_return_base<void> {
     void return_void() {}
 };
 

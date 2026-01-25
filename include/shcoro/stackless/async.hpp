@@ -4,27 +4,24 @@
 #include <exception>
 #include <optional>
 
+#include "async_concepts.hpp"
 #include "awaiter_base.hpp"
 #include "noncopyable.h"
 #include "promise_base.hpp"
 #include "scheduler.hpp"
-#include "async_concepts.hpp"
 
 namespace shcoro {
 // Async operation that can be suspended within a nested coroutine
 template <typename T = void>
 class [[nodiscard]] Async : noncopyable {
    public:
-    struct promise_type : async_promise_base<T> {
+    struct promise_type
+        : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter<promise_type>>,
+          promise_return_base<T>,
+          promise_exception_base,
+          promise_scheduler_base,
+          promise_caller_base {
         auto get_return_object() { return Async{this}; }
-
-        auto final_suspend() noexcept { return ResumeCallerAwaiter<promise_type>{}; }
-
-        void set_caller(std::coroutine_handle<> handle) noexcept { caller_ = handle; }
-        std::coroutine_handle<> get_caller() noexcept { return caller_; }
-
-       protected:
-        std::coroutine_handle<> caller_{};
     };
 
     constexpr bool await_ready() const noexcept { return false; }
@@ -79,22 +76,13 @@ class [[nodiscard]] Async : noncopyable {
 template <typename T = void>
 class AsyncRO : noncopyable {
    public:
-    struct promise_base {
-        std::suspend_never initial_suspend() noexcept { return {}; }
-        std::suspend_always final_suspend() noexcept { return {}; }
+    struct promise_type : promise_suspend_base<std::suspend_never, std::suspend_always>,
+                          promise_return_base<T>,
+                          promise_exception_base
 
-        void unhandled_exception() { exception_ = std::current_exception(); }
-        void rethrow_if_exception() {
-            if (exception_) [[unlikely]] {
-                std::rethrow_exception(exception_);
-            }
-        }
-
-       private:
-        std::exception_ptr exception_{nullptr};
+    {
+        auto get_return_object() { return AsyncRO{this}; }
     };
-
-    struct promise_type;
 
     ~AsyncRO() {
         if (self_) {
@@ -115,27 +103,6 @@ class AsyncRO : noncopyable {
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
-};
-
-template <typename T>
-struct AsyncRO<T>::promise_type : promise_base {
-    auto get_return_object() { return AsyncRO{this}; }
-
-    template <typename U>
-    void return_value(U&& val) {
-        value_ = std::forward<U>(val);
-    }
-    const T& get_return_value() const& { return value_; }
-    T get_return_value() && { return std::move(value_); }
-
-   protected:
-    T value_{};
-};
-
-template <>
-struct AsyncRO<void>::promise_type : promise_base {
-    auto get_return_object() { return AsyncRO{this}; }
-    void return_void() {}
 };
 
 }  // namespace shcoro
