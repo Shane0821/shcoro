@@ -3,7 +3,7 @@
 #include <coroutine>
 
 namespace shcoro {
-    
+
 template <typename PromiseType>
 struct ResumeCallerAwaiter {
     constexpr bool await_ready() const noexcept { return false; }
@@ -14,4 +14,17 @@ struct ResumeCallerAwaiter {
     }
 };
 
-}
+struct GetSchedulerAwaiter {
+    constexpr bool await_ready() const noexcept { return false; }
+    auto await_resume() const noexcept { return scheduler_; }
+
+    template <AsyncPromiseConcept PromiseType>
+    bool await_suspend(std::coroutine_handle<PromiseType> h) noexcept {
+        scheduler_ = h.promise().get_scheduler();
+        return false;
+    }
+
+    AsyncScheduler scheduler_;
+};
+
+}  // namespace shcoro
