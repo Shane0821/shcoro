@@ -42,7 +42,7 @@ struct TimedAwaiter {
     TimedAwaiter(time_t duration = 0) { duration_ = duration; }
     constexpr bool await_ready() const noexcept { return false; }
 
-    template <shcoro::AsyncPromiseConcept CallerPromiseType>
+    template <shcoro::PromiseSchedulerConcept CallerPromiseType>
     auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
         caller.promise().get_scheduler().template as<TimedScheduler>()->register_task(
             caller, duration_);

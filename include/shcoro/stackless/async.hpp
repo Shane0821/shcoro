@@ -29,7 +29,7 @@ class [[nodiscard]] Async : noncopyable {
     template <typename CallerPromiseType>
     auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
         self_.promise().set_caller(caller);
-        if constexpr (AsyncPromiseConcept<CallerPromiseType>) {
+        if constexpr (PromiseSchedulerConcept<CallerPromiseType>) {
             self_.promise().set_scheduler(caller.promise().get_scheduler());
         }
         return self_;
