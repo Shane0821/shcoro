@@ -2,6 +2,8 @@
 
 #include <coroutine>
 
+#include "promise_concepts.hpp"
+
 namespace shcoro {
 
 template <typename PromiseType>
