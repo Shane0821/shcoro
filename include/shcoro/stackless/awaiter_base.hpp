@@ -27,4 +27,16 @@ struct GetSchedulerAwaiter {
     AsyncScheduler scheduler_;
 };
 
+struct GetCoroAwaiter {
+    constexpr bool await_ready() const noexcept { return false; }
+    auto await_resume() const noexcept { return coro_; }
+
+    bool await_suspend(std::coroutine_handle<> caller) noexcept {
+        coro_ = caller;
+        return false;
+    }
+
+    std::coroutine_handle<> coro_;
+};
+
 }  // namespace shcoro
