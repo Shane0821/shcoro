@@ -98,9 +98,15 @@ class [[nodiscard]] MuxAdapter : noncopyable {
     struct promise_type : promise_suspend_base<std::suspend_never, ResumeMuxAwaiter>,
                           promise_return_base<T>,
                           promise_exception_base {
+        promise_type() {
+            resume_mux_cb_ = []() -> std::coroutine_handle<> {
+                return std::noop_coroutine();
+            };
+        }
+
         auto get_return_object() { return MuxAdapter{this}; }
 
-        void set_resume_mux_callback(resume_mux_callback cb) { resume_mux_cb_ = cb; }
+        void set_resume_mux_callback(auto&& cb) { resume_mux_cb_ = cb; }
         auto get_resume_mux_callback() const { return resume_mux_cb_; }
 
        protected:
@@ -112,8 +118,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
         constexpr void await_resume() const noexcept { /* should never be called */ }
         std::coroutine_handle<> await_suspend(
             std::coroutine_handle<promise_type> h) const noexcept {
-            auto cb = h.promise().get_resume_mux_callback();
-            return cb ? cb() : std::noop_coroutine();
+            return h.promise().get_resume_mux_callback()();
         }
     };
 
@@ -126,7 +131,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
 
     bool done() { return self_.done(); }
 
-    void set_resume_mux_callback(resume_mux_callback cb) {
+    void set_resume_mux_callback(auto&& cb) {
         self_.promise().set_resume_mux_callback(cb);
     }
 
