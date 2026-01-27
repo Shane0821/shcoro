@@ -45,36 +45,35 @@ struct GetCoroAwaiter {
 template <typename... Adapters>
 struct AllOfAwaiter {
     AllOfAwaiter(Adapters&&... adapters)
-        : adapters_(std::make_tuple<Adapters...>(std::move(adapters)...)) {}
+        : adapters_(std::make_tuple<Adapters...>(std::forward<Adapters>(adapters)...)) {}
 
     constexpr bool await_ready() const noexcept { return false; }
 
     template <typename MuxPromise>
     bool await_suspend(std::coroutine_handle<MuxPromise> mux) {
         return std::apply(
-            [&](auto&&... adapters) {
+            [=](auto&&... adapters) {
                 auto fn = [&](auto& adapter) {
                     if (adapter.done()) {
-                        mux.promise().finish_one();
-                    } else {
-                        adapter.set_resume_mux_callback(
-                            [mux]() -> std::coroutine_handle<> {
-                                auto& promise = mux.promise();
-                                promise.finish_one();
-                                if (!promise.resumable()) {
-                                    return std::noop_coroutine();
-                                }
-                                return mux;
-                            });
+                        return;
                     }
+                    mux.promise().add_child(adapter.get_self());
+                    adapter.set_resume_mux_callback([mux]() -> std::coroutine_handle<> {
+                        auto& promise = mux.promise();
+                        promise.finish_one();
+                        if (!promise.resumable()) {
+                            return std::noop_coroutine();
+                        }
+                        return mux;
+                    });
                 };
 
                 (fn(adapters), ...);
-                return mux.promise().resumable();
+                return !mux.promise().resumable();
             },
             adapters_);
     }
-    auto await_resume() noexcept {
+    auto await_resume() const noexcept {
         return std::apply(
             [](auto&&... adapters) { return std::make_tuple(adapters.get()...); },
             adapters_);
