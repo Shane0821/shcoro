@@ -133,11 +133,13 @@ class [[nodiscard]] MuxAdapter : noncopyable {
         }
     }
 
-    bool done() { return self_.done(); }
+    auto get_self() const noexcept { return self_; }
 
     void set_resume_mux_callback(auto&& cb) {
         self_.promise().set_resume_mux_callback(cb);
     }
+
+    bool done() const noexcept { return self_.done(); }
 
     MuxAdapter(MuxAdapter&& other) noexcept
         : self_(std::exchange(other.self_, nullptr)) {}
