@@ -46,21 +46,8 @@ struct promise_suspend_base {
 };
 
 // return value handling
-template <typename... Args>
-struct promise_return_base {
-    template <typename U>
-    void return_value(U&& val) {
-        value_ = std::forward<U>(val);
-    }
-
-    auto get_return_value() { return std::move(value_); }
-
-   protected:
-    std::tuple<Args...> value_{};
-};
-
 template <typename T>
-struct promise_return_base<T> {
+struct promise_return_base {
     template <typename U>
     void return_value(U&& val) {
         value_ = std::forward<U>(val);

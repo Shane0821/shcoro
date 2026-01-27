@@ -7,29 +7,30 @@
 
 namespace shcoro {
 
-template <typename... T>
+template <typename T>
 class Mux;
 
 template <typename T>
 class MuxAdapter;
 
-template <typename... T>
+template <typename T>
 class [[nodiscard]] Mux : noncopyable {
    public:
     struct promise_type
         : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter<promise_type>>,
-          promise_return_base<T...>,
+          promise_return_base<T>,
           promise_caller_base,
           promise_scheduler_base,
           promise_exception_base {
-        promise_type() { children_.reserve(sizeof...(T)); }
-
         auto get_return_object() { return Mux{this}; }
 
         void set_self(std::coroutine_handle<promise_type> self) noexcept { self_ = self; }
         auto get_self() const noexcept { return self_; }
 
-        void add_child(std::coroutine_handle<> child) { children_.emplace_back(child); }
+        void add_child(std::coroutine_handle<> child) {
+            resume_limit_++;
+            children_.emplace_back(child);
+        }
 
         void set_resume_limit(size_t num) noexcept { resume_limit_ = num; }
         void finish_one() noexcept { finish_count_++; }
@@ -39,7 +40,7 @@ class [[nodiscard]] Mux : noncopyable {
         std::coroutine_handle<promise_type> self_{};
         std::vector<std::coroutine_handle<>> children_{};
         size_t finish_count_{0};
-        size_t resume_limit_{sizeof...(T)};
+        size_t resume_limit_{0};
     };
 
     constexpr bool await_ready() const noexcept { return false; }
@@ -54,14 +55,14 @@ class [[nodiscard]] Mux : noncopyable {
     }
 
     auto await_resume()
-        requires((sizeof...(T) > 1) || (!std::is_same_v<T..., void>))
+        requires(!std::is_same_v<T, void>)
     {
         this->self_.promise().rethrow_if_exception();
         return std::move(this->self_.promise().get_return_value());
     }
 
     void await_resume()
-        requires((sizeof...(T) == 1) && std::is_same_v<T..., void>)
+        requires(std::is_same_v<T, void>)
     {
         this->self_.promise().rethrow_if_exception();
     }
@@ -162,7 +163,7 @@ struct AllOfAwaiter {
         : adapters_(std::make_tuple<MuxAdapter<T>...>(std::move(adapters)...)) {}
 
     constexpr bool await_ready() const noexcept { return false; }
-    bool await_suspend(std::coroutine_handle<typename Mux<T...>::promise_type> mux) {
+    bool await_suspend(std::coroutine_handle<typename Mux<std::tuple<T...>>::promise_type> mux) {
         static_assert(sizeof...(T) > 0);
         return std::apply(
             [&](auto&&... adapters) {
