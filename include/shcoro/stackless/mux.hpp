@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "async.hpp"
+#include "traits.h"
 
 namespace shcoro {
 
@@ -123,10 +124,12 @@ class [[nodiscard]] MuxAdapter : noncopyable {
         }
     };
 
-    T get() const {
+    auto get() const {
         self_.promise().rethrow_if_exception();
         if constexpr (!std::is_same_v<T, void>) {
             return self_.promise().get_return_value();
+        } else {
+            return empty{};
         }
     }
 
@@ -155,47 +158,6 @@ class [[nodiscard]] MuxAdapter : noncopyable {
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
-};
-
-template <typename... T>
-struct AllOfAwaiter {
-    AllOfAwaiter(MuxAdapter<T>... adapters)
-        : adapters_(std::make_tuple<MuxAdapter<T>...>(std::move(adapters)...)) {}
-
-    constexpr bool await_ready() const noexcept { return false; }
-    bool await_suspend(std::coroutine_handle<typename Mux<std::tuple<T...>>::promise_type> mux) {
-        static_assert(sizeof...(T) > 0);
-        return std::apply(
-            [&](auto&&... adapters) {
-                auto fn = [&](auto& adapter) {
-                    if (adapter.done()) {
-                        mux.promise().finish_one();
-                    } else {
-                        adapter.set_resume_mux_callback(
-                            [mux]() -> std::coroutine_handle<> {
-                                auto& promise = mux.promise();
-                                promise.finish_one();
-                                if (!promise.resumable()) {
-                                    return std::noop_coroutine();
-                                }
-                                return mux;
-                            });
-                    }
-                };
-
-                (fn(adapters), ...);
-                return mux.promise().resumable();
-            },
-            adapters_);
-    }
-    constexpr std::tuple<T...> await_resume() noexcept {
-        return std::apply(
-            [](auto&&... adapters) { return std::make_tuple<T...>(adapters.get()...); },
-            adapters_);
-    }
-
-   protected:
-    std::tuple<MuxAdapter<T>...> adapters_;
 };
 
 }  // namespace shcoro
