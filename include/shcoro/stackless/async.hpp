@@ -16,7 +16,7 @@ template <typename T = void>
 class [[nodiscard]] Async : noncopyable {
    public:
     struct promise_type
-        : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter<promise_type>>,
+        : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter>,
           promise_return_base<T>,
           promise_exception_base,
           promise_scheduler_base,

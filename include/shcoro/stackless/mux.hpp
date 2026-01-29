@@ -18,7 +18,7 @@ template <typename T>
 class [[nodiscard]] Mux : noncopyable {
    public:
     struct promise_type
-        : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter<promise_type>>,
+        : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter>,
           promise_return_base<T>,
           promise_caller_base,
           promise_scheduler_base,
@@ -97,7 +97,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
 
     struct ResumeMuxAwaiter;
 
-    struct promise_type : promise_suspend_base<std::suspend_never, ResumeMuxAwaiter>,
+    struct promise_type : promise_suspend_base<std::suspend_always, ResumeMuxAwaiter>,
                           promise_return_base<T>,
                           promise_exception_base {
         promise_type() {
@@ -139,6 +139,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
         self_.promise().set_resume_mux_callback(cb);
     }
 
+    void resume() const { return self_.resume(); }
     bool done() const noexcept { return self_.done(); }
 
     MuxAdapter(MuxAdapter&& other) noexcept

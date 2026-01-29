@@ -16,6 +16,7 @@ struct AllOfAwaiter {
         return std::apply(
             [=](auto&&... adapters) {
                 auto fn = [&](auto& adapter) {
+                    adapter.resume();
                     if (adapter.done()) {
                         return;
                     }
