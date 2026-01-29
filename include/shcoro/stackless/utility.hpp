@@ -2,6 +2,7 @@
 
 #include "async.hpp"
 #include "mux.hpp"
+#include "mux_awaiter.hpp"
 
 // spawns an async task without a scheduler
 // NOTE: the inner most coro should not be suspended,
