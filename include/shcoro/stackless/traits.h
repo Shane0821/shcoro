@@ -23,11 +23,11 @@ struct void_to_empty<void> {
 };
 
 template <typename... Args>
-struct replace_void {
+struct replace_void_tuple {
     using type = std::tuple<typename void_to_empty<Args>::type...>;
 };
 
 template <typename... Args>
-using replace_void_t = typename replace_void<Args...>::type;
+using replace_void_tuple_t = typename replace_void_tuple<Args...>::type;
 
 };  // namespace shcoro
