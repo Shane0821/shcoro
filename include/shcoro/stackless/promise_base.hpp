@@ -3,6 +3,7 @@
 #include <coroutine>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 #include "scheduler.hpp"
 
@@ -36,6 +37,21 @@ struct promise_caller_base {
 
    protected:
     std::coroutine_handle<> caller_;
+};
+
+struct promise_callee_base {
+    void set_callee(std::coroutine_handle<> handle) noexcept { callee_ = handle; }
+    std::coroutine_handle<> get_callee() noexcept { return callee_; }
+
+   protected:
+    std::coroutine_handle<> callee_;
+};
+
+struct promise_child_base {
+    void add_child(std::coroutine_handle<> handle) { children_.push_back(handle); }
+
+   protected:
+    std::vector<std::coroutine_handle<>> children_;
 };
 
 // suspension behaviour control
