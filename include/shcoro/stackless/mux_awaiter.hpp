@@ -6,7 +6,7 @@ namespace shcoro {
 
 template <typename... T>
 struct AllOfAwaiter {
-    AllOfAwaiter(MuxAdapter<T>... adapters)
+    AllOfAwaiter(MuxAdapter<T>&&... adapters)
         : adapters_(std::make_tuple(std::move(adapters)...)) {}
 
     constexpr bool await_ready() const noexcept { return false; }
@@ -36,7 +36,8 @@ struct AllOfAwaiter {
             },
             adapters_);
     }
-    auto await_resume() const noexcept {
+
+    auto await_resume() const {
         return std::apply(
             [](auto&&... adapters) { return std::make_tuple(adapters.get()...); },
             adapters_);
@@ -45,4 +46,4 @@ struct AllOfAwaiter {
    protected:
     std::tuple<MuxAdapter<T>...> adapters_;
 };
-};
+};  // namespace shcoro
