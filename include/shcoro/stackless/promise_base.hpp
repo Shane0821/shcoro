@@ -11,15 +11,7 @@ namespace shcoro {
 
 // exception handling
 struct promise_exception_base {
-    void unhandled_exception() { exception_ = std::current_exception(); }
-    void rethrow_if_exception() {
-        if (exception_) [[unlikely]] {
-            std::rethrow_exception(exception_);
-        }
-    }
-
-   protected:
-    std::exception_ptr exception_{nullptr};
+    void unhandled_exception() { std::terminate(); }
 };
 
 // scheduler support
