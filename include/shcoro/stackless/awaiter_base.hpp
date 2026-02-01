@@ -27,7 +27,7 @@ struct GetSchedulerAwaiter {
         return false;
     }
 
-    AsyncScheduler scheduler_;
+    Scheduler scheduler_;
 };
 
 struct GetCoroAwaiter {
