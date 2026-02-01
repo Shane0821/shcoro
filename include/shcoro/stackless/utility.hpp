@@ -14,14 +14,14 @@ AsyncRO<T> spawn_async(Async<T> task) {
 }
 
 // spawns an async task with a scheduler
-template <typename T, typename Scheduler>
-AsyncRO<T> spawn_async(Async<T> task, Scheduler& scheduler) {
-    task.set_scheduler(AsyncScheduler::from(scheduler));
+template <typename T, typename SchedulerT>
+AsyncRO<T> spawn_async(Async<T> task, SchedulerT& sched) {
+    task.set_scheduler(Scheduler::from(sched));
     co_return co_await task;
 }
 
 template <typename T>
-MuxAdapter<T> make_mux_adapter(Async<T> task, AsyncScheduler sched) {
+MuxAdapter<T> make_mux_adapter(Async<T> task, Scheduler& sched) {
     task.set_scheduler(sched);
     co_return co_await task;
 }
