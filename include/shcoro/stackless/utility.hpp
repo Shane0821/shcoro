@@ -27,9 +27,15 @@ MuxAdapter<T> make_mux_adapter(Async<T> task, AsyncScheduler sched) {
 }
 
 template <typename... T>
-Mux<replace_void_tuple_t<T...>> all_of(Async<T>... tasks) {
+Mux<all_of_return_t<T...>> all_of(Async<T>... tasks) {
     auto scheduler = co_await GetSchedulerAwaiter{};
     co_return co_await AllOfAwaiter(make_mux_adapter(std::move(tasks), scheduler)...);
+}
+
+template <typename... T>
+Mux<any_of_return_t<T...>> any_of(Async<T>... tasks) {
+    auto scheduler = co_await GetSchedulerAwaiter{};
+    co_return co_await AnyOfAwaiter(make_mux_adapter(std::move(tasks), scheduler)...);
 }
 
 }  // namespace shcoro
