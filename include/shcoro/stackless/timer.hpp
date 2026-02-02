@@ -13,11 +13,24 @@
 namespace shcoro {
 class TimedScheduler {
    public:
-    void register_task(std::coroutine_handle<> coro, time_t duration) {
+    using value_type = time_t;
+
+    void register_coro(std::coroutine_handle<> coro, time_t duration) {
         coros_.insert(
             {std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) +
                  duration,
              coro});
+    }
+
+    void unregister_coro(std::coroutine_handle<> coro) {
+        std::cout << "unregister coro\n";
+        for (auto it = coros_.begin(); it != coros_.end(); it++) {
+            if (it->second == coro) {
+                std::cout << "found coro handle, key: " << it->first << "\n";
+                coros_.erase(it);
+                break;
+            }
+        }
     }
 
     void run() {
@@ -44,8 +57,7 @@ struct TimedAwaiter {
 
     template <shcoro::PromiseSchedulerConcept CallerPromiseType>
     auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
-        caller.promise().get_scheduler().template as<TimedScheduler>()->register_task(
-            caller, duration_);
+        caller.promise().register_to_scheduler(caller, duration_);
     }
 
     void await_resume() const noexcept {}
