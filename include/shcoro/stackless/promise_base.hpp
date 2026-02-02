@@ -16,11 +16,21 @@ struct promise_exception_base {
 
 // scheduler support
 struct promise_scheduler_base {
-    void set_scheduler(AsyncScheduler other) noexcept { scheduler_ = other; }
-    AsyncScheduler get_scheduler() const noexcept { return scheduler_; }
+    void set_scheduler(Scheduler other) noexcept { scheduler_ = other; }
+    Scheduler& get_scheduler() noexcept { return scheduler_; }
+
+    template <typename Value>
+    void register_to_scheduler(std::coroutine_handle<> coro, Value&& val) {
+        if (scheduler_)
+            scheduler_register_coro(scheduler_, coro, std::forward<Value>(val));
+    }
+
+    void unregister_to_scheduler(std::coroutine_handle<> coro) {
+        if (scheduler_) scheduler_unregister_coro(scheduler_, coro);
+    }
 
    protected:
-    AsyncScheduler scheduler_;
+    Scheduler scheduler_;
 };
 
 struct promise_caller_base {
