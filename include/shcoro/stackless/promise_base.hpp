@@ -79,7 +79,7 @@ struct promise_return_base {
 
 template <>
 struct promise_return_base<void> {
-    void return_void() {}
+    void return_void() const noexcept {}
 };
 
 }  // namespace shcoro
