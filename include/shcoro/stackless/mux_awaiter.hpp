@@ -13,22 +13,24 @@ struct AllOfAwaiter {
 
     template <typename MuxPromise>
     bool await_suspend(std::coroutine_handle<MuxPromise> mux) {
+        mux.promise().set_resume_limit(sizeof...(T));
         return std::apply(
-            [=](auto&&... adapters) {
-                auto fn = [&](auto& adapter) {
+            [&](auto&&... adapters) {
+                auto fn = [&](auto&& adapter) {
                     adapter.resume();
                     if (adapter.done()) {
+                        mux.promise().finish_one();
                         return;
                     }
-                    mux.promise().add_child(adapter.get_self());
-                    adapter.set_resume_mux_callback([mux]() -> std::coroutine_handle<> {
-                        auto& promise = mux.promise();
-                        promise.finish_one();
-                        if (!promise.resumable()) {
-                            return std::noop_coroutine();
-                        }
-                        return mux;
-                    });
+                    adapter.set_resume_mux_callback(
+                        [mux](auto) -> std::coroutine_handle<> {
+                            auto& promise = mux.promise();
+                            promise.finish_one();
+                            if (!promise.resumable()) {
+                                return std::noop_coroutine();
+                            }
+                            return mux;
+                        });
                 };
 
                 (fn(adapters), ...);
