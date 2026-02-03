@@ -4,10 +4,10 @@
 #include <exception>
 #include <optional>
 
-#include "promise_concepts.hpp"
 #include "awaiter_base.hpp"
 #include "noncopyable.h"
 #include "promise_base.hpp"
+#include "promise_concepts.hpp"
 #include "scheduler.hpp"
 
 namespace shcoro {
@@ -45,25 +45,16 @@ class [[nodiscard]] Async : noncopyable {
     auto await_resume()
         requires(!std::is_same_v<T, void>)
     {
-        this->self_.promise().rethrow_if_exception();
         return std::move(this->self_.promise().get_return_value());
     }
 
     void await_resume()
         requires(std::is_same_v<T, void>)
-    {
-        this->self_.promise().rethrow_if_exception();
-    }
+    {}
 
-    void set_scheduler(AsyncScheduler sched) noexcept {
-        self_.promise().set_scheduler(sched);
-    }
+    void set_scheduler(Scheduler sched) noexcept { self_.promise().set_scheduler(sched); }
 
-    Async(Async&& other) noexcept : self_(std::exchange(other.self_, nullptr)) {}
-    Async& operator=(Async&& other) noexcept {
-        self_ = std::exchange(other.self_, nullptr);
-        return *this;
-    }
+    Async(Async&& other) noexcept : self_(std::exchange(other.self_, {})) {}
 
     ~Async() {
         if (self_) {
@@ -98,7 +89,6 @@ class AsyncRO : noncopyable {
     }
 
     T get() {
-        self_.promise().rethrow_if_exception();
         if constexpr (!std::is_same_v<T, void>) {
             return self_.promise().get_return_value();
         }
