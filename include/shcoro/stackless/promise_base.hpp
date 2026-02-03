@@ -19,16 +19,6 @@ struct promise_scheduler_base {
     void set_scheduler(Scheduler other) noexcept { scheduler_ = other; }
     Scheduler& get_scheduler() noexcept { return scheduler_; }
 
-    template <typename Value>
-    void register_to_scheduler(std::coroutine_handle<> coro, Value&& val) {
-        if (scheduler_)
-            scheduler_register_coro(scheduler_, coro, std::forward<Value>(val));
-    }
-
-    void unregister_to_scheduler(std::coroutine_handle<> coro) {
-        if (scheduler_) scheduler_unregister_coro(scheduler_, coro);
-    }
-
    protected:
     Scheduler scheduler_;
 };
