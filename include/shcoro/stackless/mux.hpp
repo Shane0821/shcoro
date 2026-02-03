@@ -74,7 +74,8 @@ class [[nodiscard]] Mux : noncopyable {
 template <typename T>
 class [[nodiscard]] MuxAdapter : noncopyable {
    public:
-    using resume_mux_callback = std::function<std::coroutine_handle<>()>;
+    using value_type = T;
+    using resume_mux_callback = std::function<std::coroutine_handle<>(replace_void_t<T>)>;
 
     struct ResumeMuxAwaiter;
 
@@ -82,10 +83,11 @@ class [[nodiscard]] MuxAdapter : noncopyable {
                           promise_return_base<T>,
                           promise_exception_base {
         promise_type() {
-            resume_mux_cb_ = []() -> std::coroutine_handle<> {
+            resume_mux_cb_ = [](replace_void_t<T>) -> std::coroutine_handle<> {
                 return std::noop_coroutine();
             };
         }
+        ~promise_type() {}
 
         auto get_return_object() { return MuxAdapter{this}; }
 
@@ -101,12 +103,16 @@ class [[nodiscard]] MuxAdapter : noncopyable {
         constexpr void await_resume() const noexcept { /* should never be called */ }
         std::coroutine_handle<> await_suspend(
             std::coroutine_handle<promise_type> h) const noexcept {
-            return h.promise().get_resume_mux_callback()();
+            if constexpr (!std::is_same_v<T, void>) {
+                return h.promise().get_resume_mux_callback()(
+                    std::move(h.promise().get_return_value()));
+            } else {
+                return h.promise().get_resume_mux_callback()(empty{});
+            }
         }
     };
 
     auto get() const {
-        self_.promise().rethrow_if_exception();
         if constexpr (!std::is_same_v<T, void>) {
             return self_.promise().get_return_value();
         } else {
