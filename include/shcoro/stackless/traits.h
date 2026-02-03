@@ -61,4 +61,13 @@ struct replace_void_indexed_variant {
 template <typename... Args>
 using any_of_return_t = typename replace_void_indexed_variant<Args...>::type;
 
+template <class T, class = void>
+struct has_value_type : std::false_type {};
+
+template <class T>
+struct has_value_type<T, std::void_t<typename T::value_type>> : std::true_type {};
+
+template <class T>
+inline constexpr bool has_value_type_v = has_value_type<T>::value;
+
 };  // namespace shcoro
