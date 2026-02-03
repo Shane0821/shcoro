@@ -18,7 +18,8 @@ class Scheduler {
     Scheduler(SchedulerT& sched)
         : pimpl_(std::make_unique<NonOwningSchedulerModel<SchedulerT>>(sched)) {}
 
-    Scheduler(const Scheduler& other) : pimpl_(other.pimpl_->clone()) {}
+    Scheduler(const Scheduler& other)
+        : pimpl_(other.pimpl_ ? other.pimpl_->clone() : nullptr) {}
     Scheduler& operator=(const Scheduler& other) {
         Scheduler copy(other);
         pimpl_.swap(copy.pimpl_);
@@ -51,25 +52,25 @@ class Scheduler {
 
     template <class SchedulerT>
     struct NonOwningSchedulerModel final : SchedulerBase {
-        explicit NonOwningSchedulerModel(SchedulerT& s) : sched_(s) {}
+        explicit NonOwningSchedulerModel(SchedulerT& s) : sched_(&s) {}
 
         void register_coro(std::coroutine_handle<> h, const void* value) override {
             using ValueT = typename SchedulerT::value_type;
-            sched_.register_coro(h, *static_cast<const ValueT*>(value));
+            sched_->register_coro(h, *static_cast<const ValueT*>(value));
         }
 
         void unregister_coro(std::coroutine_handle<> h) override {
-            sched_.unregister_coro(h);
+            sched_->unregister_coro(h);
         }
 
         std::unique_ptr<SchedulerBase> clone() const override {
             return std::make_unique<NonOwningSchedulerModel>(*this);
         }
 
-        SchedulerT& sched_;
+        SchedulerT* sched_{nullptr};
     };
 
-    std::unique_ptr<SchedulerBase> pimpl_;
+    std::unique_ptr<SchedulerBase> pimpl_{};
 };
 
 }  // namespace shcoro
