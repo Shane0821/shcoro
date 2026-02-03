@@ -15,12 +15,18 @@ namespace shcoro {
 template <typename T = void>
 class [[nodiscard]] Async : noncopyable {
    public:
-    struct promise_type
-        : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter>,
-          promise_return_base<T>,
-          promise_exception_base,
-          promise_scheduler_base,
-          promise_caller_base {
+    struct promise_type : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter>,
+                          promise_return_base<T>,
+                          promise_exception_base,
+                          promise_scheduler_base,
+                          promise_caller_base {
+        promise_type() {}
+        ~promise_type() {
+            if (scheduler_) {
+                scheduler_unregister_coro(
+                    scheduler_, std::coroutine_handle<promise_type>::from_promise(*this));
+            }
+        }
         auto get_return_object() { return Async{this}; }
     };
 
