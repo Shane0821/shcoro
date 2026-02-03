@@ -129,12 +129,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
     void resume() const { return self_.resume(); }
     bool done() const noexcept { return self_.done(); }
 
-    MuxAdapter(MuxAdapter&& other) noexcept
-        : self_(std::exchange(other.self_, nullptr)) {}
-    MuxAdapter& operator=(MuxAdapter&& other) noexcept {
-        self_ = std::exchange(other.self_, nullptr);
-        return *this;
-    }
+    MuxAdapter(MuxAdapter&& other) noexcept : self_(std::exchange(other.self_, {})) {}
 
     ~MuxAdapter() {
         if (self_) {
