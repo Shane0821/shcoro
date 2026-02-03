@@ -17,29 +17,18 @@ class MuxAdapter;
 template <typename T>
 class [[nodiscard]] Mux : noncopyable {
    public:
-    struct promise_type
-        : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter>,
-          promise_return_base<T>,
-          promise_caller_base,
-          promise_scheduler_base,
-          promise_exception_base {
+    struct promise_type : promise_suspend_base<std::suspend_always, ResumeCallerAwaiter>,
+                          promise_return_base<T>,
+                          promise_caller_base,
+                          promise_scheduler_base,
+                          promise_exception_base {
         auto get_return_object() { return Mux{this}; }
-
-        void set_self(std::coroutine_handle<promise_type> self) noexcept { self_ = self; }
-        auto get_self() const noexcept { return self_; }
-
-        void add_child(std::coroutine_handle<> child) {
-            resume_limit_++;
-            children_.emplace_back(child);
-        }
 
         void set_resume_limit(size_t num) noexcept { resume_limit_ = num; }
         void finish_one() noexcept { finish_count_++; }
         bool resumable() const noexcept { return finish_count_ >= resume_limit_; }
 
        protected:
-        std::coroutine_handle<promise_type> self_{};
-        std::vector<std::coroutine_handle<>> children_{};
         size_t finish_count_{0};
         size_t resume_limit_{0};
     };
@@ -83,7 +72,6 @@ class [[nodiscard]] Mux : noncopyable {
    private:
     explicit Mux(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
-        self_.promise().set_self(self_);
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
