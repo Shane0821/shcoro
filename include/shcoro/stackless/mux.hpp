@@ -47,21 +47,14 @@ class [[nodiscard]] Mux : noncopyable {
     auto await_resume()
         requires(!std::is_same_v<T, void>)
     {
-        this->self_.promise().rethrow_if_exception();
         return std::move(this->self_.promise().get_return_value());
     }
 
     void await_resume()
         requires(std::is_same_v<T, void>)
-    {
-        this->self_.promise().rethrow_if_exception();
-    }
+    {}
 
-    Mux(Mux&& other) noexcept : self_(std::exchange(other.self_, nullptr)) {}
-    Mux& operator=(Mux&& other) noexcept {
-        self_ = std::exchange(other.self_, nullptr);
-        return *this;
-    }
+    Mux(Mux&& other) noexcept : self_(std::exchange(other.self_, {})) {}
 
     ~Mux() {
         if (self_) {
