@@ -23,10 +23,8 @@ class TimedScheduler {
     }
 
     void unregister_coro(std::coroutine_handle<> coro) {
-        std::cout << "unregister coro\n";
         for (auto it = coros_.begin(); it != coros_.end(); it++) {
             if (it->second == coro) {
-                std::cout << "found coro handle, key: " << it->first << "\n";
                 coros_.erase(it);
                 break;
             }
@@ -42,8 +40,8 @@ class TimedScheduler {
             if (it->first > cur) {
                 std::this_thread::sleep_for(std::chrono::seconds(it->first - cur));
             }
-            it->second.resume();
-            coros_.erase(it);
+            auto handle = it->second;
+            handle.resume();
         }
     }
 
@@ -57,7 +55,7 @@ struct TimedAwaiter {
 
     template <shcoro::PromiseSchedulerConcept CallerPromiseType>
     auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
-        caller.promise().register_to_scheduler(caller, duration_);
+        scheduler_register_coro(caller.promise().get_scheduler(), caller, duration_);
     }
 
     void await_resume() const noexcept {}
