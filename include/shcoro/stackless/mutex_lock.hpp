@@ -11,13 +11,13 @@ class MutexLock final : noncopyable {
     struct MutexAwaiter {
         MutexAwaiter(MutexLock* mutex) : mutex_(mutex) {}
 
-        bool await_ready() const noexcept { return mutex_->try_lock(); }
+        bool await_ready() noexcept { return !mutex_->locked_; }
 
         void await_suspend(std::coroutine_handle<> caller) {
             mutex_->waiting_list_.push(caller);
         }
 
-        void await_resume() const noexcept {}
+        void await_resume() noexcept { mutex_->locked_ = true; }
 
         MutexLock* mutex_{nullptr};
     };
