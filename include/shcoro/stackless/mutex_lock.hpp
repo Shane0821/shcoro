@@ -32,7 +32,7 @@ class MutexLock final : noncopyable {
         return !ret;
     }
 
-    MutexAwaiter operator co_await() { return MutexAwaiter(this); }
+    [[nodiscard]] MutexAwaiter lock() { return MutexAwaiter(this); }
 
     void unlock() {
         if (!waiting_list_.empty()) {

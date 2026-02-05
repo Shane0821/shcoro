@@ -13,7 +13,7 @@ using shcoro::TimedScheduler;
 MutexLock mutex;
 
 Async<void> void_func() {
-    co_await mutex;
+    co_await mutex.lock();
     std::cout << "void_func called\n";
     std::cout << "void_func return\n";
     mutex.unlock();
@@ -21,7 +21,7 @@ Async<void> void_func() {
 }
 
 Async<int> inner_func(int x) {
-    co_await mutex;
+    co_await mutex.lock();
     std::cout << "inner_func called\n";
     int ret = x * x;
     std::cout << "register to scheduler: " << x << '\n';
