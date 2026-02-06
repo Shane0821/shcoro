@@ -12,34 +12,40 @@
 The project builds with CMake and exports a CMake target: **`shcoro::shcoro`**.
 
 ### Features
-
 - **Async / task composition**
-  - Define coroutine functions returning `shcoro::Async<T>`
-  - `co_await` nested `Async` tasks
-  - `spawn_async(...)` to run a top-level async task and retrieve its result
+    - Define coroutine functions returning `shcoro::Async<T>`
+    - `co_await` nested `Async` tasks
+    - `spawn_async(...)` to run a top-level async task and retrieve its result
 
 - **Pluggable scheduling**
-  - `shcoro::Scheduler` is a type-erased wrapper around your scheduler type
-  - A scheduler type must provide:
-    - `using value_type = ...;`
-    - `void register_coro(std::coroutine_handle<>, value_type value);`
-    - `void unregister_coro(std::coroutine_handle<>);`
+    - `shcoro::Scheduler` is a type-erased wrapper around your scheduler type
+    - A scheduler type must provide:
+    - `using value_type = ...;`
+    - `void register_coro(std::coroutine_handle<>, value_type value);`
+    - `void unregister_coro(std::coroutine_handle<>);`
 
 - **Timed scheduling (demo scheduler)**
-  - `TimedScheduler` resumes coroutines after a `time_t` delay
-  - `co_await TimedAwaiter{seconds};` registers the coroutine into the scheduler
+    - `TimedScheduler` resumes coroutines after a `time_t` delay
+    - `co_await TimedAwaiter{seconds};` registers the coroutine into the scheduler
 
 - **Fan-in / multiplexing**
-  - `all_of(a, b, c...)`: wait until **all** complete, returns a tuple of results
-  - `any_of(a, b, c...)`: wait until **any** completes, returns a variant tagged by index
-  - `void` results are represented as `shcoro::empty` in these combinators
+    - `all_of(a, b, c...)`: wait until **all** complete, returns a tuple of results
+    - `any_of(a, b, c...)`: wait until **any** completes, returns a variant tagged by index
+    - `void` results are represented as `shcoro::empty` in these combinators
 
 - **Coroutine mutex**
-  - `lock()` continues coroutine execution if none are waiting or suspends it self until `unlock()` is called 
-  - `unlock()` resumes the next waiter or releases the lock if none are waiting
+    - `lock()` continues coroutine execution if none are waiting or suspends it self until `unlock()` is called 
+    - `unlock()` resumes the next waiter or releases the lock if none are waiting
+
+- **Coroutine read write lock**
+    - `read_lock()`: writers are not able to enter when the coroutine is read locked
+    - `read_unlock()` resumes the next writer when active reader count reaches 0, or releases the lock if none are waiting
+    - `write_lock()`: readers are not able to enter when the coroutine is write locked
+    - `write_unlock()` resumes the next waiter or releases the lock if none are waiting
+    - Support reader priority and fair policy
 
 - **Generator**
-  - `Generator<T>` supports `co_yield` and range-for iteration
+    - `Generator<T>` supports `co_yield` and range-for iteration
 
 ### Notes / current limitations
 
