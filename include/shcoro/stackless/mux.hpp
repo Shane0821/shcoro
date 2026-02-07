@@ -123,7 +123,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
                     std::move(h.promise().get_return_value()));
             } else {
                 SHCORO_LOG("void cb");
-                return h.promise().get_resume_mux_callback()(empty{});
+                return h.promise().get_resume_mux_callback()(replace_void_t<T>{});
             }
         }
     };
@@ -132,7 +132,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
         if constexpr (!std::is_same_v<T, void>) {
             return self_.promise().get_return_value();
         } else {
-            return empty{};
+            return replace_void_t<T>{};
         }
     }
 
