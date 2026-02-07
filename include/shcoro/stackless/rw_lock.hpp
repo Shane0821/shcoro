@@ -60,7 +60,7 @@ class RWLock final : noncopyable {
             return false;
         }
         writer_active_ = true;
-        return false;
+        return true;
     }
 
     [[nodiscard]] ReadAwaiter read_lock() { return ReadAwaiter(this); }
@@ -144,7 +144,7 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
             return false;
         }
         writer_active_ = true;
-        return false;
+        return true;
     }
 
     [[nodiscard]] ReadAwaiter read_lock() { return ReadAwaiter(this); }
