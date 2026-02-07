@@ -93,14 +93,14 @@ class [[nodiscard]] MuxAdapter : noncopyable {
     struct promise_type : promise_suspend_base<std::suspend_always, ResumeMuxAwaiter>,
                           promise_return_base<T>,
                           promise_exception_base {
-        promise_type() { SHCORO_LOG("mux adapter promise created: ", this); }
-        ~promise_type() {
-            SHCORO_LOG("mux adapter promise destroyed: ", this);
+        promise_type() {
+            SHCORO_LOG("mux adapter promise created: ", this);
             resume_mux_cb_ = [](replace_void_t<T>) -> std::coroutine_handle<> {
                 SHCORO_LOG("default resume mux cb called");
                 return std::noop_coroutine();
             };
         }
+        ~promise_type() { SHCORO_LOG("mux adapter promise destroyed: ", this); }
 
         auto get_return_object() { return MuxAdapter{this}; }
 
