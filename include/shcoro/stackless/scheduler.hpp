@@ -75,16 +75,25 @@ class Scheduler {
     operator bool() const noexcept { return pimpl_ != nullptr; }
 
     friend void scheduler_register_coro(Scheduler& sched, std::coroutine_handle<> h) {
+        if (!sched) [[unlikely]] {
+            std::terminate();
+        }
         sched.pimpl_->register_coro(h);
     }
 
     template <class ValueT>
     friend void scheduler_register_coro(Scheduler& sched, std::coroutine_handle<> h,
                                         ValueT&& v) {
+        if (!sched) [[unlikely]] {
+            std::terminate();
+        }
         sched.pimpl_->register_coro(h, &v);
     }
 
     friend void scheduler_unregister_coro(Scheduler& sched, std::coroutine_handle<> h) {
+        if (!sched) [[unlikely]] {
+            std::terminate();
+        }
         sched.pimpl_->unregister_coro(h);
     }
 
