@@ -100,7 +100,7 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
         }
 
         void await_suspend(std::coroutine_handle<> caller) {
-            lock_->waiting_list_.push(caller);
+            lock_->waiting_list_.push(CoroNode{.handle_ = caller, .is_writer_ = false});
         }
 
         void await_resume() noexcept { lock_->active_readers_++; }
@@ -116,7 +116,7 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
         }
 
         void await_suspend(std::coroutine_handle<> caller) {
-            lock_->waiting_list_.push(caller);
+            lock_->waiting_list_.push(CoroNode{.handle_ = caller, .is_writer_ = true});
             lock_->waiting_writer_++;
         }
 
@@ -153,22 +153,36 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
     void read_unlock() {
         if (--active_readers_ != 0) return;
         if (!waiting_list_.empty()) {
-            auto nxt = waiting_list_.front();
+            auto nxt = waiting_list_.front().handle_;
             waiting_list_.pop();
             nxt.resume();
         }
     }
     void write_unlock() {
         writer_active_ = false;
-        if (!waiting_list_.empty()) {
-            auto nxt = waiting_list_.front();
+
+        if (waiting_list_.empty()) return;
+
+        auto nxt = waiting_list_.front();
+        waiting_list_.pop();
+        nxt.handle_.resume();
+        if (nxt.is_writer_) return;
+
+        // resume grouped readers
+        while (!waiting_list_.empty() && !waiting_list_.front().is_writer_) {
+            auto nxt = waiting_list_.front().handle_;
             waiting_list_.pop();
             nxt.resume();
         }
     }
 
    private:
-    std::queue<std::coroutine_handle<>> waiting_list_;
+    struct CoroNode {
+        std::coroutine_handle<> handle_;
+        bool is_writer_;
+    };
+
+    std::queue<CoroNode> waiting_list_;
     size_t active_readers_{0};
     size_t waiting_writer_{0};
     bool writer_active_{false};
