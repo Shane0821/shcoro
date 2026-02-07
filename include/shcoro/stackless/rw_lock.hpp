@@ -5,7 +5,7 @@
 #include <coroutine>
 #include <queue>
 
-#include "noncopyable.h"
+#include "shcoro/utils/noncopyable.h"
 
 namespace shcoro {
 
