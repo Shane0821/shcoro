@@ -82,6 +82,8 @@ class [[nodiscard]] AsyncRO : noncopyable {
         auto get_return_object() { return AsyncRO{this}; }
     };
 
+    AsyncRO(AsyncRO&& other) noexcept : self_(std::exchange(other.self_, {})) {}
+
     ~AsyncRO() {
         if (self_) {
             self_.destroy();
