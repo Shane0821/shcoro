@@ -44,6 +44,8 @@ class TimedScheduler {
                 std::this_thread::sleep_for(std::chrono::seconds(it->first - cur));
             }
             auto handle = it->second;
+            SHCORO_LOG("unregister handle");
+            unregister_coro(handle);
             SHCORO_LOG("resume handle");
             handle.resume();
         }
