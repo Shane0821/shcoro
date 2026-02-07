@@ -5,7 +5,7 @@
 #include <optional>
 
 #include "awaiter_base.hpp"
-#include "noncopyable.h"
+#include "shcoro/utils/noncopyable.h"
 #include "promise_base.hpp"
 #include "promise_concepts.hpp"
 #include "scheduler.hpp"
