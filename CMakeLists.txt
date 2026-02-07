@@ -15,6 +15,9 @@ endif()
 option(SHCORO_BUILD_DEMO "Build the demo" OFF)
 option(SHCORO_BUILD_TEST "Build the test" OFF)
 
+# Option to enable logging (default: ON for Debug, OFF for Release)
+option(SHCORO_ENABLE_LOG "Enable debug log" OFF)
+
 # ============================
 # Directories
 # ============================
@@ -48,6 +51,14 @@ include(FetchContent)
 # ============================
 # Build
 # ============================
+
+# Create different configurations
+if(SHCORO_ENABLE_LOG)
+    add_compile_definitions(SHCORO_ENABLE_LOG)
+    message(STATUS "Logging enabled")
+else()
+    message(STATUS "Logging disabled")
+endif()
 
 # add_subdirectory(libs)
 add_subdirectory(src)

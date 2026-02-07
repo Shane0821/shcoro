@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "promise_concepts.hpp"
+#include "shcoro/utils/logger.h"
 
 namespace shcoro {
 class TimedScheduler {
@@ -16,6 +17,7 @@ class TimedScheduler {
     using value_type = time_t;
 
     void register_coro(std::coroutine_handle<> coro, time_t duration) {
+        SHCORO_LOG("timer register: ", duration);
         coros_.insert(
             {std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) +
                  duration,
@@ -25,6 +27,7 @@ class TimedScheduler {
     void unregister_coro(std::coroutine_handle<> coro) {
         for (auto it = coros_.begin(); it != coros_.end(); it++) {
             if (it->second == coro) {
+                SHCORO_LOG("timer unregister");
                 coros_.erase(it);
                 break;
             }
@@ -33,14 +36,15 @@ class TimedScheduler {
 
     void run() {
         while (!coros_.empty()) {
+            SHCORO_LOG("remaining task: ", coros_.size());
             auto it = coros_.begin();
-            if (it == coros_.end()) continue;
             time_t cur =
                 std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
             if (it->first > cur) {
                 std::this_thread::sleep_for(std::chrono::seconds(it->first - cur));
             }
             auto handle = it->second;
+            SHCORO_LOG("resume handle");
             handle.resume();
         }
     }

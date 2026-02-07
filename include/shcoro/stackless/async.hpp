@@ -5,10 +5,11 @@
 #include <optional>
 
 #include "awaiter_base.hpp"
-#include "shcoro/utils/noncopyable.h"
 #include "promise_base.hpp"
 #include "promise_concepts.hpp"
 #include "scheduler.hpp"
+#include "shcoro/utils/logger.h"
+#include "shcoro/utils/noncopyable.h"
 
 namespace shcoro {
 // Async operation that can be suspended within a nested coroutine
@@ -20,8 +21,9 @@ class [[nodiscard]] Async : noncopyable {
                           promise_exception_base,
                           promise_scheduler_base,
                           promise_caller_base {
-        promise_type() {}
+        promise_type() { SHCORO_LOG("async promise created: ", this); }
         ~promise_type() {
+            SHCORO_LOG("async promise destroyed: ", this);
             if (scheduler_) {
                 scheduler_unregister_coro(
                     scheduler_, std::coroutine_handle<promise_type>::from_promise(*this));
@@ -45,12 +47,15 @@ class [[nodiscard]] Async : noncopyable {
     auto await_resume()
         requires(!std::is_same_v<T, void>)
     {
+        SHCORO_LOG("async await resume: ", &self_.promise());
         return std::move(this->self_.promise().get_return_value());
     }
 
     void await_resume()
         requires(std::is_same_v<T, void>)
-    {}
+    {
+        SHCORO_LOG("async await resume: ", &self_.promise());
+    }
 
     void set_scheduler(Scheduler sched) noexcept { self_.promise().set_scheduler(sched); }
 
@@ -58,6 +63,7 @@ class [[nodiscard]] Async : noncopyable {
 
     ~Async() {
         if (self_) {
+            SHCORO_LOG("Async destroy: ", this);
             self_.destroy();
         }
     }
@@ -65,6 +71,7 @@ class [[nodiscard]] Async : noncopyable {
    private:
     explicit Async(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
+        SHCORO_LOG("Async created: ", this);
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
@@ -79,6 +86,8 @@ class [[nodiscard]] AsyncRO : noncopyable {
                           promise_exception_base
 
     {
+        promise_type() { SHCORO_LOG("async ro promise created: ", this); }
+        ~promise_type() { SHCORO_LOG("async ro promise destroyed: ", this); }
         auto get_return_object() { return AsyncRO{this}; }
     };
 
@@ -86,6 +95,7 @@ class [[nodiscard]] AsyncRO : noncopyable {
 
     ~AsyncRO() {
         if (self_) {
+            SHCORO_LOG("AsyncRO destroy: ", this);
             self_.destroy();
         }
     }
@@ -99,6 +109,7 @@ class [[nodiscard]] AsyncRO : noncopyable {
    private:
     explicit AsyncRO(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
+        SHCORO_LOG("AsyncRO created: ", this);
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};

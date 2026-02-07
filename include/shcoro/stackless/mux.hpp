@@ -22,11 +22,17 @@ class [[nodiscard]] Mux : noncopyable {
                           promise_caller_base,
                           promise_scheduler_base,
                           promise_exception_base {
+        promise_type() { SHCORO_LOG("mux promise created: ", this); }
+        ~promise_type() { SHCORO_LOG("mux promise destroyed: ", this); }
+
         auto get_return_object() { return Mux{this}; }
 
         void set_resume_limit(size_t num) noexcept { resume_limit_ = num; }
         void finish_one() noexcept { finish_count_++; }
         bool resumable() const noexcept { return finish_count_ >= resume_limit_; }
+        void log_progress() const {
+            SHCORO_LOG("mux progress: ", finish_count_, "/", resume_limit_);
+        }
 
        protected:
         size_t finish_count_{0};
@@ -47,17 +53,21 @@ class [[nodiscard]] Mux : noncopyable {
     auto await_resume()
         requires(!std::is_same_v<T, void>)
     {
+        SHCORO_LOG("mux await resumed: ", &self_.promise());
         return std::move(this->self_.promise().get_return_value());
     }
 
     void await_resume()
         requires(std::is_same_v<T, void>)
-    {}
+    {
+        SHCORO_LOG("mux await resumed: ", &self_.promise());
+    }
 
     Mux(Mux&& other) noexcept : self_(std::exchange(other.self_, {})) {}
 
     ~Mux() {
         if (self_) {
+            SHCORO_LOG("Mux destroy: ", this);
             self_.destroy();
         }
     }
@@ -65,6 +75,7 @@ class [[nodiscard]] Mux : noncopyable {
    private:
     explicit Mux(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
+        SHCORO_LOG("Mux created: ", this);
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
@@ -82,12 +93,14 @@ class [[nodiscard]] MuxAdapter : noncopyable {
     struct promise_type : promise_suspend_base<std::suspend_always, ResumeMuxAwaiter>,
                           promise_return_base<T>,
                           promise_exception_base {
-        promise_type() {
+        promise_type() { SHCORO_LOG("mux adapter promise created: ", this); }
+        ~promise_type() {
+            SHCORO_LOG("mux adapter promise destroyed: ", this);
             resume_mux_cb_ = [](replace_void_t<T>) -> std::coroutine_handle<> {
+                SHCORO_LOG("default resume mux cb called");
                 return std::noop_coroutine();
             };
         }
-        ~promise_type() {}
 
         auto get_return_object() { return MuxAdapter{this}; }
 
@@ -103,10 +116,13 @@ class [[nodiscard]] MuxAdapter : noncopyable {
         constexpr void await_resume() const noexcept { /* should never be called */ }
         std::coroutine_handle<> await_suspend(
             std::coroutine_handle<promise_type> h) const noexcept {
+            SHCORO_LOG("mux adapter final suspense and call resume cb: ", &h.promise());
             if constexpr (!std::is_same_v<T, void>) {
+                SHCORO_LOG("none void cb");
                 return h.promise().get_resume_mux_callback()(
                     std::move(h.promise().get_return_value()));
             } else {
+                SHCORO_LOG("void cb");
                 return h.promise().get_resume_mux_callback()(empty{});
             }
         }
@@ -133,6 +149,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
 
     ~MuxAdapter() {
         if (self_) {
+            SHCORO_LOG("MuxAdapter destroy: ", this);
             self_.destroy();
         }
     }
@@ -140,6 +157,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
    private:
     explicit MuxAdapter(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
+        SHCORO_LOG("MuxAdapter created: ", this);
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};

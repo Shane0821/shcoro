@@ -4,6 +4,7 @@
 #include <tuple>
 
 #include "promise_concepts.hpp"
+#include "shcoro/utils/logger.h"
 
 namespace shcoro {
 
@@ -13,6 +14,7 @@ struct ResumeCallerAwaiter {
     template <typename PromiseType>
     std::coroutine_handle<> await_suspend(
         std::coroutine_handle<PromiseType> h) const noexcept {
+        SHCORO_LOG("final suspense and resume caller: ", &h.promise());
         return h.promise().get_caller();
     }
 };

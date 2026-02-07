@@ -25,21 +25,27 @@ struct AllOfAwaiter {
                     adapter.set_resume_mux_callback(
                         [mux](auto) -> std::coroutine_handle<> {
                             auto& promise = mux.promise();
+                            SHCORO_LOG("resume allof cb called: ", &promise);
                             promise.finish_one();
+                            promise.log_progress();
                             if (!promise.resumable()) {
+                                SHCORO_LOG("allof resume limit not reached");
                                 return std::noop_coroutine();
                             }
+                            SHCORO_LOG("allof resume limit reached");
                             return mux;
                         });
                 };
 
                 (fn(adapters), ...);
+                SHCORO_LOG("allof resumealbe ? ", mux.promise().resumable());
                 return !mux.promise().resumable();
             },
             adapters_);
     }
 
     auto await_resume() const {
+        SHCORO_LOG("allof awaiter resumed");
         return std::apply(
             [](auto&&... adapters) { return std::make_tuple(adapters.get()...); },
             adapters_);
@@ -64,7 +70,10 @@ struct AnyOfAwaiter {
         return await_suspend_impl(mux, std::index_sequence_for<T...>{});
     }
 
-    auto await_resume() { return std::move(ret_); }
+    auto await_resume() {
+        SHCORO_LOG("anyof awaiter resumed");
+        return std::move(ret_);
+    }
 
    protected:
     template <typename MuxPromise, std::size_t... Is>
@@ -80,6 +89,7 @@ struct AnyOfAwaiter {
                     adapter.resume();
                     if (adapter.done()) {
                         // Use compile-time index: Is is constexpr
+                        SHCORO_LOG("any of done");
                         this->ret_ = indexed_type<I, value_type>{adapter.get()};
                         return true;
                     }
@@ -103,6 +113,7 @@ struct AnyOfAwaiter {
         using value_type = replace_void_t<typename std::decay_t<Adapter>::value_type>;
         adapter.set_resume_mux_callback(
             [mux, this](auto ret) mutable -> std::coroutine_handle<> {
+                SHCORO_LOG("resume any of cb called");
                 this->ret_ = indexed_type<I, value_type>{std::move(ret)};
                 return mux;
             });
