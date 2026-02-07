@@ -72,7 +72,7 @@ class [[nodiscard]] Async : noncopyable {
 
 // A wrapper to spawn a Async task
 template <typename T = void>
-class AsyncRO : noncopyable {
+class [[nodiscard]] AsyncRO : noncopyable {
    public:
     struct promise_type : promise_suspend_base<std::suspend_never, std::suspend_always>,
                           promise_return_base<T>,
