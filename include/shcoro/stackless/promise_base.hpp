@@ -16,7 +16,7 @@ struct promise_exception_base {
 
 // scheduler support
 struct promise_scheduler_base {
-    void set_scheduler(Scheduler other) noexcept { scheduler_ = other; }
+    void set_scheduler(Scheduler other) noexcept { scheduler_ = std::move(other); }
     Scheduler& get_scheduler() noexcept { return scheduler_; }
 
    protected:
