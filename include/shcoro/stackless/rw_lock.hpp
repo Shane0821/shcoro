@@ -23,7 +23,7 @@ class RWLock final : noncopyable {
             lock_->waiting_list_.push(caller);
         }
 
-        void await_resume() noexcept { lock_->active_reader_++; }
+        void await_resume() noexcept { lock_->active_readers_++; }
 
         RWLock* lock_{nullptr};
     };
@@ -32,7 +32,7 @@ class RWLock final : noncopyable {
         WriteAwaiter(RWLock* lock) : lock_(lock) {}
 
         bool await_ready() noexcept {
-            return (lock_->active_reader_ == 0 && !lock_->writer_active_);
+            return (lock_->active_readers_ == 0 && !lock_->writer_active_);
         }
 
         void await_suspend(std::coroutine_handle<> caller) {
@@ -52,11 +52,11 @@ class RWLock final : noncopyable {
         if (writer_active_) {
             return false;
         }
-        active_reader_++;
+        active_readers_++;
         return true;
     }
     bool try_write_lock() noexcept {
-        if (active_reader_ || writer_active_) {
+        if (active_readers_ || writer_active_) {
             return false;
         }
         writer_active_ = true;
@@ -67,7 +67,7 @@ class RWLock final : noncopyable {
     [[nodiscard]] WriteAwaiter write_lock() { return WriteAwaiter(this); }
 
     void read_unlock() {
-        if (--active_reader_ != 0) return;
+        if (--active_readers_ != 0) return;
         if (!waiting_list_.empty()) {
             auto nxt = waiting_list_.front();
             waiting_list_.pop();
@@ -85,7 +85,7 @@ class RWLock final : noncopyable {
 
    private:
     std::queue<std::coroutine_handle<>> waiting_list_;
-    size_t active_reader_{0};
+    size_t active_readers_{0};
     bool writer_active_{false};
 };
 
@@ -103,7 +103,7 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
             lock_->waiting_list_.push(caller);
         }
 
-        void await_resume() noexcept { lock_->active_reader_++; }
+        void await_resume() noexcept { lock_->active_readers_++; }
 
         RWLock* lock_{nullptr};
     };
@@ -112,7 +112,7 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
         WriteAwaiter(RWLock* lock) : lock_(lock) {}
 
         bool await_ready() noexcept {
-            return (!lock_->active_reader_ && !lock_->writer_active_);
+            return (!lock_->active_readers_ && !lock_->writer_active_);
         }
 
         void await_suspend(std::coroutine_handle<> caller) {
@@ -136,11 +136,11 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
         if (writer_active_ || waiting_writer_) {
             return false;
         }
-        active_reader_++;
+        active_readers_++;
         return true;
     }
     bool try_write_lock() noexcept {
-        if (active_reader_ || writer_active_) {
+        if (active_readers_ || writer_active_) {
             return false;
         }
         writer_active_ = true;
@@ -151,7 +151,7 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
     [[nodiscard]] WriteAwaiter write_lock() { return WriteAwaiter(this); }
 
     void read_unlock() {
-        if (--active_reader_ != 0) return;
+        if (--active_readers_ != 0) return;
         if (!waiting_list_.empty()) {
             auto nxt = waiting_list_.front();
             waiting_list_.pop();
@@ -169,7 +169,7 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
 
    private:
     std::queue<std::coroutine_handle<>> waiting_list_;
-    size_t active_reader_{0};
+    size_t active_readers_{0};
     size_t waiting_writer_{0};
     bool writer_active_{false};
 };
