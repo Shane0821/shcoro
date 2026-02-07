@@ -67,8 +67,8 @@ class RWLock final : noncopyable {
     [[nodiscard]] WriteAwaiter write_lock() { return WriteAwaiter(this); }
 
     void read_unlock() {
-        active_reader_--;
-        if (!waiting_list_.empty() && active_reader_ == 0) {
+        if (--active_reader_ != 0) return;
+        if (!waiting_list_.empty()) {
             auto nxt = waiting_list_.front();
             waiting_list_.pop();
             nxt.resume();
@@ -151,8 +151,8 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
     [[nodiscard]] WriteAwaiter write_lock() { return WriteAwaiter(this); }
 
     void read_unlock() {
-        active_reader_--;
-        if (!waiting_list_.empty() && active_reader_ == 0) {
+        if (--active_reader_ != 0) return;
+        if (!waiting_list_.empty()) {
             auto nxt = waiting_list_.front();
             waiting_list_.pop();
             nxt.resume();
