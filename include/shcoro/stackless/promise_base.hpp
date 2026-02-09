@@ -56,6 +56,8 @@ struct promise_suspend_base {
 // return value handling
 template <typename T>
 struct promise_return_base {
+    using return_type = T;
+
     template <typename U>
     void return_value(U&& val) {
         value_ = std::forward<U>(val);
@@ -69,6 +71,8 @@ struct promise_return_base {
 
 template <>
 struct promise_return_base<void> {
+    using return_type = void;
+
     void return_void() const noexcept {}
 };
 
