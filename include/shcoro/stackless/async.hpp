@@ -38,8 +38,7 @@ class [[nodiscard]] Async : noncopyable {
     auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
         self_.promise().set_caller(caller);
         if constexpr (PromiseSchedulerConcept<CallerPromiseType>) {
-            auto& sched = caller.promise().get_scheduler();
-            if (sched) self_.promise().set_scheduler(sched);
+            self_.promise().set_scheduler(caller.promise().get_scheduler());
         }
         return self_;
     }
