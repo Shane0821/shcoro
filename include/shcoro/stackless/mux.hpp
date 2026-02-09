@@ -63,6 +63,8 @@ class [[nodiscard]] Mux : noncopyable {
         SHCORO_LOG("mux await resumed: ", &self_.promise());
     }
 
+    void set_scheduler(Scheduler sched) noexcept { self_.promise().set_scheduler(sched); }
+
     Mux(Mux&& other) noexcept : self_(std::exchange(other.self_, {})) {}
 
     ~Mux() {
