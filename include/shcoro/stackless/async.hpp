@@ -62,7 +62,7 @@ class [[nodiscard]] Async : noncopyable {
 
     ~Async() {
         if (self_) {
-            SHCORO_LOG("Async destroy: ", this);
+            SHCORO_LOG("Async destroy: ", &self_.promise());
             self_.destroy();
         }
     }
@@ -70,7 +70,7 @@ class [[nodiscard]] Async : noncopyable {
    private:
     explicit Async(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
-        SHCORO_LOG("Async created: ", this);
+        SHCORO_LOG("Async created: ", &self_.promise());
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
@@ -94,7 +94,7 @@ class [[nodiscard]] AsyncRO : noncopyable {
 
     ~AsyncRO() {
         if (self_) {
-            SHCORO_LOG("AsyncRO destroy: ", this);
+            SHCORO_LOG("AsyncRO destroy: ", &self_.promise());
             self_.destroy();
         }
     }
@@ -108,7 +108,7 @@ class [[nodiscard]] AsyncRO : noncopyable {
    private:
     explicit AsyncRO(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
-        SHCORO_LOG("AsyncRO created: ", this);
+        SHCORO_LOG("AsyncRO created: ", &self_.promise());
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};

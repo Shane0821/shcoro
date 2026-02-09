@@ -67,7 +67,7 @@ class [[nodiscard]] Mux : noncopyable {
 
     ~Mux() {
         if (self_) {
-            SHCORO_LOG("Mux destroy: ", this);
+            SHCORO_LOG("Mux destroy: ", &self_.promise());
             self_.destroy();
         }
     }
@@ -75,7 +75,7 @@ class [[nodiscard]] Mux : noncopyable {
    private:
     explicit Mux(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
-        SHCORO_LOG("Mux created: ", this);
+        SHCORO_LOG("Mux created: ", &self_.promise());
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
@@ -149,7 +149,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
 
     ~MuxAdapter() {
         if (self_) {
-            SHCORO_LOG("MuxAdapter destroy: ", this);
+            SHCORO_LOG("MuxAdapter destroy: ", &self_.promise());
             self_.destroy();
         }
     }
@@ -157,7 +157,7 @@ class [[nodiscard]] MuxAdapter : noncopyable {
    private:
     explicit MuxAdapter(promise_type* promise) {
         self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
-        SHCORO_LOG("MuxAdapter created: ", this);
+        SHCORO_LOG("MuxAdapter created: ", &self_.promise());
     }
 
     std::coroutine_handle<promise_type> self_{nullptr};
