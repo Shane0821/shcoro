@@ -22,6 +22,17 @@ AsyncRO<awaiter_return_t<T>> spawn_async(T task, SchedulerT& sched) {
 }
 
 template <ContinuationAwaiterConcept T>
+AsyncDetacher spawn_async_detached(T task) {
+    co_await task;
+}
+
+template <ContinuationAwaiterConcept T, typename SchedulerT>
+AsyncDetacher spawn_async_detached(T task, SchedulerT& sched) {
+    task.set_scheduler(sched);
+    co_await task;
+}
+
+template <ContinuationAwaiterConcept T>
 MuxAdapter<awaiter_return_t<T>> make_mux_adapter(T task, Scheduler& sched) {
     task.set_scheduler(sched);
     co_return co_await task;

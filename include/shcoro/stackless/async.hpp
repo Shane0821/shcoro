@@ -114,4 +114,33 @@ class [[nodiscard]] AsyncRO : noncopyable {
     std::coroutine_handle<promise_type> self_{nullptr};
 };
 
+class AsyncDetacher : noncopyable {
+   public:
+    struct promise_type : promise_suspend_base<std::suspend_never, std::suspend_never>,
+                          promise_return_base<void>,
+                          promise_exception_base
+
+    {
+        promise_type() { SHCORO_LOG("AsyncDetacher promise created: ", this); }
+        ~promise_type() { SHCORO_LOG("AsyncDetacher promise destroyed: ", this); }
+        auto get_return_object() { return AsyncDetacher{this}; }
+    };
+
+    AsyncDetacher(AsyncDetacher&& other) noexcept : self_(std::exchange(other.self_, {})) {}
+
+    ~AsyncDetacher() {
+        if (self_) {
+            SHCORO_LOG("AsyncDetacher destroyed: ", &self_.promise());
+        }
+    }
+
+   private:
+    explicit AsyncDetacher(promise_type* promise) {
+        self_ = std::coroutine_handle<promise_type>::from_promise(*promise);
+        SHCORO_LOG("AsyncDetacher created: ", &self_.promise());
+    }
+
+    std::coroutine_handle<promise_type> self_{nullptr};
+};
+
 }  // namespace shcoro
