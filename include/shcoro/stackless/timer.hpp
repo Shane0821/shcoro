@@ -10,6 +10,7 @@
 
 #include "promise_concepts.hpp"
 #include "shcoro/utils/logger.h"
+#include "scheduler_awaiter.hpp"
 
 namespace shcoro {
 class TimedScheduler {
@@ -56,17 +57,6 @@ class TimedScheduler {
     std::unordered_map<void*, decltype(coros_)::iterator> coro_map_;
 };
 
-struct TimedAwaiter {
-    TimedAwaiter(time_t duration = 0) { duration_ = duration; }
-    constexpr bool await_ready() const noexcept { return false; }
+using TimedAwaiter = SchedulerAwaiter<time_t>;
 
-    template <shcoro::PromiseSchedulerConcept CallerPromiseType>
-    auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
-        scheduler_register_coro(caller.promise().get_scheduler(), caller, duration_);
-    }
-
-    void await_resume() const noexcept {}
-
-    time_t duration_;
-};
 }  // namespace shcoro
