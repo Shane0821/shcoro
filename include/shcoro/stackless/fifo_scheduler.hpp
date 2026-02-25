@@ -1,10 +1,10 @@
 #pragma once
 
-#include <coroutine>
 #include <list>
 #include <unordered_map>
 
 #include "promise_concepts.hpp"
+#include "shcoro/stackless/scheduler_awaiter.hpp"
 #include "shcoro/utils/logger.h"
 
 namespace shcoro {
