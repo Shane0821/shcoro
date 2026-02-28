@@ -74,6 +74,32 @@ class TimedScheduler {
     std::unordered_map<void*, decltype(coros_)::iterator> coro_map_;
 };
 
-using TimedAwaiter = SchedulerAwaiter<time_t>;
+struct TimedAwaiter : SchedulerAwaiter<time_t> {
+    using SchedulerAwaiter::SchedulerAwaiter;
+
+    TimedAwaiter(TimedScheduler* sched, time_t duration)
+        : SchedulerAwaiter{duration}, scheduler_(sched) {}
+    TimedAwaiter(TimedScheduler& sched, time_t duration)
+        : SchedulerAwaiter{duration}, scheduler_(&sched) {}
+
+    template <shcoro::PromiseSchedulerConcept CallerPromiseType>
+    auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
+        if (!scheduler_) {
+            scheduler_register_coro(caller.promise().get_scheduler(), caller,
+                                    std::move(value_));
+        } else {
+            scheduler_->register_coro(caller, value_);
+        }
+    }
+
+    template <typename CallerPromiseType>
+    auto await_suspend(std::coroutine_handle<CallerPromiseType> caller) noexcept {
+        if (scheduler_) {
+            scheduler_->register_coro(caller, value_);
+        }   
+    }
+
+    TimedScheduler* scheduler_{nullptr};
+};
 
 }  // namespace shcoro
