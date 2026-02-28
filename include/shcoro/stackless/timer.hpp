@@ -5,7 +5,6 @@
 #include <chrono>
 #include <coroutine>
 #include <set>
-#include <thread>
 #include <unordered_map>
 
 #include "promise_concepts.hpp"
@@ -42,7 +41,7 @@ class TimedScheduler {
             time_t cur =
                 std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
             if (it->first > cur) {
-                std::this_thread::sleep_for(std::chrono::seconds(it->first - cur));
+                return;
             }
             auto handle = it->second;
             SHCORO_LOG("unregister handle");
@@ -59,7 +58,7 @@ class TimedScheduler {
             time_t cur =
                 std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
             if (it->first > cur) {
-                std::this_thread::sleep_for(std::chrono::seconds(it->first - cur));
+                continue;
             }
             auto handle = it->second;
             SHCORO_LOG("unregister handle");
