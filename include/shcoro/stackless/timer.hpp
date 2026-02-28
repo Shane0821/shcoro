@@ -9,8 +9,8 @@
 #include <unordered_map>
 
 #include "promise_concepts.hpp"
-#include "shcoro/utils/logger.h"
 #include "scheduler_awaiter.hpp"
+#include "shcoro/utils/logger.h"
 
 namespace shcoro {
 class TimedScheduler {
@@ -32,6 +32,23 @@ class TimedScheduler {
             SHCORO_LOG("timer unregister");
             coros_.erase(coro_map_[addr]);
             coro_map_.erase(addr);
+        }
+    }
+
+    void run_once() {
+        if (!coros_.empty()) {
+            SHCORO_LOG("remaining task: ", coros_.size());
+            auto it = coros_.begin();
+            time_t cur =
+                std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            if (it->first > cur) {
+                std::this_thread::sleep_for(std::chrono::seconds(it->first - cur));
+            }
+            auto handle = it->second;
+            SHCORO_LOG("unregister handle");
+            unregister_coro(handle);
+            SHCORO_LOG("resume handle");
+            handle.resume();
         }
     }
 
