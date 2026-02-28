@@ -47,6 +47,8 @@ class FIFOScheduler {
         }
     }
 
+    size_t pending_number() const { return coros_.size(); }
+
    private:
     std::list<std::coroutine_handle<>> coros_;
     std::unordered_map<void*, decltype(coros_)::iterator> coro_map_;
