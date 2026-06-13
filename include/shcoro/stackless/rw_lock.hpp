@@ -112,12 +112,12 @@ class RWLock<RWLockPolicy::FAIR> final : noncopyable {
         WriteAwaiter(RWLock* lock) : lock_(lock) {}
 
         bool await_ready() noexcept {
+            lock_->waiting_writer_++;
             return (!lock_->active_readers_ && !lock_->writer_active_);
         }
 
         void await_suspend(std::coroutine_handle<> caller) {
             lock_->waiting_list_.push(CoroNode{.handle_ = caller, .is_writer_ = true});
-            lock_->waiting_writer_++;
         }
 
         void await_resume() noexcept {
